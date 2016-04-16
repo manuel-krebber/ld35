@@ -14,6 +14,7 @@
   var houseHeight = 6
   var house = []
   var numRooms = 3
+  var numPersons = 1
 
   PIXI.loader.add('corridor-straight', 'images/straight.png')
   PIXI.loader.add('arrow', 'images/arrow.png')
@@ -86,22 +87,24 @@
   var deg45 = Math.PI / 2
   var stage = new PIXI.Container()
 
-  var pointsText = new PIXI.Text(currentMood,
+  var moodText = new PIXI.Text(currentMood,
     {
       font: '16px Arial',
       fill: topBarColor
     })
-  pointsText.x = 50
-  pointsText.y = topBarHeight / 2
-  pointsText.anchor.x = 0
-  pointsText.anchor.y = 0.5
+  moodText.x = 50
+  moodText.y = topBarHeight / 2
+  moodText.anchor.x = 0
+  moodText.anchor.y = 0.5
+
+  var moodSprite
 
   var topBar = new PIXI.Graphics()
   topBar.beginFill(topBarBackground)
   topBar.drawRect(0, 0, renderWidth, topBarHeight)
 
   stage.addChild(topBar)
-  stage.addChild(pointsText)
+  stage.addChild(moodText)
 
   function getMoodTexture (mood) {
     return mood >= 50 ? moodGoodTexture : mood <= -50 ? moodBadTexture : moodNeutralTexture
@@ -444,6 +447,21 @@
     return targets
   }
 
+  function refreshMoodDisplay () {
+    moodText.text = '' + currentMood
+    moodSprite.texture = getMoodTexture(currentMood)
+  }
+
+  function updateMood () {
+    for (var i = 0; i < numPersons; i++) {
+      currentMood -= persons[i].mood > 0 ? 0 : persons[i].mood < 0 ? 3 : 1
+    }
+
+    refreshMoodDisplay()
+  }
+
+  window.setInterval(updateMood, 5000)
+
   function makePath (paths, x, y) {
     var path = []
     var pred = paths[x][y]
@@ -496,6 +514,8 @@
   }
 
   function canMove (x, y, dx, dy) {
+    dx = Math.sign(dx)
+    dy = Math.sign(dy)
     if (x + dx < 0 || x + dx >= houseWidth) return false
     if (y + dy < 0 || y + dy >= houseHeight) return false
     var self = house[x][y].info
@@ -515,6 +535,8 @@
         person.dx = -person.dx
         person.y += person.dy
         person.dy = -person.dy
+      } else {
+        person.dx = person.dy = 0
       }
     }
   }
@@ -721,7 +743,7 @@
     return pred
   }
 
-  var person
+  var persons = []
 
   function generateLevel () {
     for (var x = 0; x < houseWidth; x++) {
@@ -785,13 +807,15 @@
     stage.addChild(grid)
 
     var moodIcon = getMoodTexture(currentMood)
-    var moodSprite = new PIXI.Sprite(moodIcon)
+    moodSprite = new PIXI.Sprite(moodIcon)
     moodSprite.anchor.set(0, 0.5)
     moodSprite.position.set(5, topBarHeight / 2)
     moodSprite.scale.set(2, 2)
     stage.addChild(moodSprite)
 
-    person = createPerson()
+    for (i = 0; i < numPersons; i++) {
+      persons.push(createPerson())
+    }
   }
 
   function onAssetsLoaded () {
@@ -805,11 +829,15 @@
     window.requestAnimationFrame(main)
 
     if (pathOutdated) {
-      refreshPathForPerson(person)
+      for (var i = 0; i < numPersons; i++) {
+        refreshPathForPerson(persons[i])
+      }
       pathOutdated = false
     }
 
-    updatePerson(person)
+    for (i = 0; i < numPersons; i++) {
+      updatePerson(persons[i])
+    }
     refreshArrows()
 
     renderer.render(stage)
