@@ -52,14 +52,17 @@
 
   var iconTextures = {
     'kitchen': PIXI.Texture.fromImage('images/icon-kitchen.png', true, PIXI.SCALE_MODES.NEAREST),
-    'sleeping': PIXI.Texture.fromImage('images/icon-sleeping.png', true, PIXI.SCALE_MODES.NEAREST)
+    'sleeping': PIXI.Texture.fromImage('images/icon-bed.png', true, PIXI.SCALE_MODES.NEAREST),
+    'bath': PIXI.Texture.fromImage('images/icon-bath.png', true, PIXI.SCALE_MODES.NEAREST),
+    'toilet': PIXI.Texture.fromImage('images/icon-toilet.png', true, PIXI.SCALE_MODES.NEAREST),
+    'gym': PIXI.Texture.fromImage('images/icon-gym.png', true, PIXI.SCALE_MODES.NEAREST),
+    'living': PIXI.Texture.fromImage('images/icon-living.png', true, PIXI.SCALE_MODES.NEAREST)
   }
 
   var desaturateFilter = new PIXI.filters.ColorMatrixFilter()
   desaturateFilter.desaturate()
 
-  // var targets = ['kitchen', 'bath', 'toilet', 'gym', 'living', 'sleeping']
-  var targets = ['kitchen', 'sleeping']
+  var targets = ['kitchen', 'bath', 'toilet', 'gym', 'living', 'sleeping']
   var availiableTargets = []
 
   var effectivePersonRadius = personRadius * globalScale
@@ -365,7 +368,7 @@
     var moodIcon = new PIXI.Sprite(getMoodTexture(100))
     moodIcon.anchor.set(1, 1.6)
     moodIcon.scale.set(2, 2)
-    moodIcon.visible = false
+    moodIcon.alpha = 0
 
     var container = new PIXI.Container()
     container.position.set(getLocationX(x), getLocationY(y))
@@ -394,7 +397,6 @@
 
     personAnim.on('mouseover', function () {
       moodIcon.alpha = 0
-      moodIcon.visible = true
       createjs.Tween.get(person.moodIcon)
         .to({ alpha: 1 }, 500, createjs.Ease.getPowInOut(4))
       if (person.iconTimeout) {
@@ -406,6 +408,7 @@
       person.iconTimeout = window.setTimeout(function () {
         createjs.Tween.get(person.moodIcon)
           .to({ alpha: 0 }, 500, createjs.Ease.getPowInOut(4))
+        person.iconTimeout = null
       }, iconFadeTime)
     })
 
@@ -559,6 +562,26 @@
     return possibilities
   }
 
+  function changePersonMood (person, newMood) {
+    if (person.mood !== newMood) {
+      console.log('new mood', person.iconTimeout)
+      person.moodIcon.texture = getMoodTexture(newMood)
+
+      if (!person.iconTimeout) {
+        createjs.Tween.get(person.moodIcon)
+          .to({ alpha: 1 }, 500, createjs.Ease.getPowInOut(4))
+        person.iconTimeout = window.setTimeout(function () {
+          console.log('to!', person.iconTimeout)
+          createjs.Tween.get(person.moodIcon)
+            .to({ alpha: 0 }, 500, createjs.Ease.getPowInOut(4))
+          person.iconTimeout = null
+        }, iconFadeTime + 500)
+        console.log('to?', person.iconTimeout)
+      }
+    }
+    person.mood = newMood
+  }
+
   function updatePerson (person) {
     if (person.dx === 0 && person.dy === 0) {
       if (person.path) {
@@ -567,7 +590,7 @@
         person.dx = direction.dx
         person.dy = direction.dy
 
-        person.mood = 100
+        changePersonMood(person, 100)
       } else if (!person.idleTimeout) {
         person.idleTimeout = window.setTimeout(function () {
           person.idleTimeout = null
@@ -577,9 +600,9 @@
             var i = Math.floor(Math.random() * dirs.length)
             person.dx = dirs[i].dx
             person.dy = dirs[i].dy
-            person.mood = person.target ? 0 : 100
+            changePersonMood(person, person.target ? 0 : 100)
           } else {
-            person.mood = -100
+            changePersonMood(person, -100)
           }
         }, idleTime)
       }
@@ -587,8 +610,10 @@
 
     if (house[person.x][person.y].info.target === person.target) {
       person.target = null
-      person.bubble.visible = false
-      person.targetIcon.visible = false
+      createjs.Tween.get(person.bubble)
+        .to({ alpha: 0 }, 500, createjs.Ease.getPowInOut(4))
+      createjs.Tween.get(person.targetIcon)
+        .to({ alpha: 0 }, 500, createjs.Ease.getPowInOut(4))
     }
 
     person.moodIcon.texture = getMoodTexture(person.mood)
