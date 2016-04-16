@@ -381,6 +381,7 @@
       location: location,
       targetIcon: targetIcon,
       moodIcon: moodIcon,
+      bubble: bubble,
       x: x,
       y: y,
       dx: 0,
@@ -472,7 +473,11 @@
   }
 
   function refreshPathForPerson (person) {
-    var paths = findPaths({x: person.x, y: person.y})
+    checkCollisionForPerson(person)
+
+    if (!person.target) return
+
+    var paths = findPaths({x: person.x + person.dx, y: person.y + person.dy})
     var targets = findTargetPositions()
     var path = null
 
@@ -490,20 +495,42 @@
     person.path = path
   }
 
-  function getPossibleDirectionsForPerson (person) {
-    var paths = findPaths({x: person.x, y: person.y})
+  function canMove (x, y, dx, dy) {
+    if (x + dx < 0 || x + dx >= houseWidth) return false
+    if (y + dy < 0 || y + dy >= houseHeight) return false
+    var self = house[x][y].info
+    var other = house[x + dx][y + dy].info
 
+    return (dx > 0 && self.right && other.left) ||
+      (dx < 0 && self.left && other.right) ||
+      (dy > 0 && self.bottom && other.top) ||
+      (dy < 0 && self.top && other.bottom)
+  }
+
+  function checkCollisionForPerson (person) {
+    if (!canMove(person.x, person.y, person.dx, person.dy)) {
+      if (person.container.position.x !== getLocationX(person.x) ||
+          person.container.position.y !== getLocationY(person.y)) {
+        person.x += person.dx
+        person.dx = -person.dx
+        person.y += person.dy
+        person.dy = -person.dy
+      }
+    }
+  }
+
+  function getPossibleDirectionsForPerson (person) {
     var possibilities = []
-    if (person.x > 0 && paths[person.x - 1][person.y]) {
+    if (canMove(person.x, person.y, -1, 0)) {
       possibilities.push({dx: -1, dy: 0})
     }
-    if (person.x < houseWidth - 1 && paths[person.x + 1][person.y]) {
+    if (canMove(person.x, person.y, 1, 0)) {
       possibilities.push({dx: 1, dy: 0})
     }
-    if (person.y > 0 && paths[person.x][person.y - 1]) {
+    if (canMove(person.x, person.y, 0, -1)) {
       possibilities.push({dx: 0, dy: -1})
     }
-    if (person.y < houseHeight - 1 && paths[person.x][person.y + 1]) {
+    if (canMove(person.x, person.y, 0, 1)) {
       possibilities.push({dx: 0, dy: 1})
     }
 
@@ -528,12 +555,18 @@
             var i = Math.floor(Math.random() * dirs.length)
             person.dx = dirs[i].dx
             person.dy = dirs[i].dy
-            person.mood = 0
+            person.mood = person.target ? 0 : 100
           } else {
             person.mood = -100
           }
         }, idleTime)
       }
+    }
+
+    if (house[person.x][person.y].info.target === person.target) {
+      person.target = null
+      person.bubble.visible = false
+      person.targetIcon.visible = false
     }
 
     person.moodIcon.texture = getMoodTexture(person.mood)
