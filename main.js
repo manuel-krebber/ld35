@@ -17,6 +17,10 @@
   var textureCross = PIXI.Texture.fromImage('images/cross.png', true, PIXI.SCALE_MODES.NEAREST)
   var textureAngle = PIXI.Texture.fromImage('images/angle.png', true, PIXI.SCALE_MODES.NEAREST)
 
+  var desaturateFilter = new PIXI.filters.ColorMatrixFilter()
+  desaturateFilter.desaturate()
+
+  var targets = ['kitchen', 'bath', 'toilet', 'gym', 'living', 'sleeping']
   var availiableTargets = ['kitchen', 'bath', 'toilet', 'gym', 'living', 'sleeping']
 
   var effectiveTileSize = tileSize * globalScale
@@ -223,6 +227,27 @@
     return false
   }
 
+  var rowsScrolling = true
+  var rowBlocked = Array(houseHeight).fill(0)
+  var colBlocked = Array(houseWidth).fill(0)
+
+  function refreshArrows () {
+    for (var x = 0; x < houseWidth; x++) {
+      var blocked = colBlocked[x] > 0
+      colArrows[2 * x].visible = !blocked
+      colArrows[2 * x + 1].visible = !blocked
+      colArrows[2 * x].filters = rowsScrolling ? [desaturateFilter] : null
+      colArrows[2 * x + 1].filters = rowsScrolling ? [desaturateFilter] : null
+    }
+    for (var y = 0; y < houseHeight; y++) {
+      blocked = rowBlocked[y] > 0
+      rowArrows[2 * y].visible = !blocked
+      rowArrows[2 * y + 1].visible = !blocked
+      rowArrows[2 * y].filters = rowsScrolling ? [desaturateFilter] : null
+      rowArrows[2 * y + 1].filters = rowsScrolling ? [desaturateFilter] : null
+    }
+  }
+
   function createPerson () {
     var personAnim = new PIXI.extras.MovieClip([
       PIXI.Texture.fromImage('images/person.png', true, PIXI.SCALE_MODES.NEAREST),
@@ -237,12 +262,11 @@
     var target = availiableTargets[Math.floor(Math.random() * availiableTargets.length)]
 
     var location = null
+    var x, y
 
     while (!location) {
-      var x = Math.floor(Math.random() * houseWidth)
-      var y = Math.floor(Math.random() * houseHeight)
-      
-      console.log(x, y)
+      x = Math.floor(Math.random() * houseWidth)
+      y = Math.floor(Math.random() * houseHeight)
 
       if (isLocationFree(house[x][y])) {
         location = house[x][y]
@@ -250,13 +274,16 @@
       }
     }
 
+    rowBlocked[y]++
+    colBlocked[x]++
+
     var person = {
       animation: personAnim,
       target: target,
       location: location
     }
 
-    location.person = person
+    location.info.person = person
 
     stage.addChild(personAnim)
 
@@ -294,19 +321,24 @@
     }
   }
 
+  var rowArrows = []
+  var colArrows = []
+
   for (y = 0; y < houseHeight; y++) {
-    createArrowSprite(y, -1, 1)
-    createArrowSprite(y, -1, -1)
+    rowArrows.push(createArrowSprite(y, -1, 1))
+    rowArrows.push(createArrowSprite(y, -1, -1))
   }
 
   for (x = 0; x < houseWidth; x++) {
-    createArrowSprite(-1, x, 1)
-    createArrowSprite(-1, x, -1)
+    colArrows.push(createArrowSprite(-1, x, 1))
+    colArrows.push(createArrowSprite(-1, x, -1))
   }
 
-  for (i = 0; i < 3; i++) {
+  for (var i = 0; i < 3; i++) {
     createPerson()
   }
+
+  refreshArrows()
 
   main()
   function main () {
