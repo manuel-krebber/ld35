@@ -783,10 +783,10 @@
       house[x] = []
       for (var y = 0; y < houseHeight; y++) {
         var info = {
-          top: y > 0 ? house[x][y - 1].info.bottom : Math.random() < 0.3,
-          left: x > 0 ? house[x - 1][y].info.right : Math.random() < 0.3,
-          right: Math.random() < 0.3,
-          bottom: Math.random() < 0.3
+          top: y > 0 ? house[x][y - 1].info.bottom : false,
+          left: x > 0 ? house[x - 1][y].info.right : false,
+          right: x < houseWidth - 1 ? Math.random() < 0.3 : false,
+          bottom: y < houseHeight - 1 ? Math.random() < 0.3 : false
         }
         var sprite = locationImage(info.top, info.left, info.right, info.bottom)
 
