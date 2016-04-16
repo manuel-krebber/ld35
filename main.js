@@ -1,11 +1,13 @@
 (function () {    
-    var margin = 30;
-    var globalScale = 2;
+    var margin = 40;
+    var globalScale = 3;
     var tileSize = 32;
-    var topBar = 40;
+    var topBarHeight = 40;
+    var topBarBackground = 0x666666;
+    var topBarColor = 0xFFFFFF;
     
-    var houseWidth = 15;
-    var houseHeight = 10;
+    var houseWidth = 10;
+    var houseHeight = 6;
     var house = []
     
     var images = [
@@ -19,7 +21,7 @@
     var effectiveTileSize = tileSize * globalScale;
     
     var renderWidth = effectiveTileSize * houseWidth + 2 * margin;
-    var renderHeight = effectiveTileSize * houseHeight + 2 * margin + topBar;
+    var renderHeight = effectiveTileSize * houseHeight + 2 * margin + topBarHeight;
     
     var renderer = PIXI.autoDetectRenderer(renderWidth, renderHeight, {backgroundColor : 0xFFFFFF});
     document.body.appendChild(renderer.view);
@@ -36,6 +38,22 @@
     var deg180 = Math.PI;
     var deg45  = Math.PI / 2;
     var stage = new PIXI.Container();
+    
+    var pointsText = new PIXI.Text('Points: 0', {
+        font: '16px Arial',
+        fill: topBarColor
+    });
+    pointsText.x = 5;
+    pointsText.y = topBarHeight / 2;
+    pointsText.anchor.x = 0
+    pointsText.anchor.y = 0.5
+    
+    var topBar = new PIXI.Graphics()
+    topBar.beginFill(topBarBackground);
+    topBar.drawRect(0, 0, renderWidth, topBarHeight);
+    
+    stage.addChild(topBar);
+    stage.addChild(pointsText);
     
     function createArrowSprite(row, column, dir) {
             var sprite = new PIXI.Sprite(arrowTexture);
@@ -55,13 +73,13 @@
                     sprite.position.x = renderWidth - margin + 2;
                 }
                 
-                sprite.position.y = topBar + margin + y * effectiveTileSize + effectiveTileSize / 2;                
+                sprite.position.y = topBarHeight + margin + y * effectiveTileSize + effectiveTileSize / 2;                
             }
             else
             {
                 if (dir < 0) 
                 {
-                    sprite.position.y = topBar + margin - 2;
+                    sprite.position.y = topBarHeight + margin - 2;
                     sprite.rotation = -deg45;
                 }
                 else
@@ -161,7 +179,7 @@
             sprite.anchor.y = 0;
 
             sprite.position.x = margin + x * effectiveTileSize;
-            sprite.position.y = topBar + margin + y * effectiveTileSize;
+            sprite.position.y = topBarHeight + margin + y * effectiveTileSize;
             sprite.scale.x = globalScale;
             sprite.scale.y = globalScale;
             
