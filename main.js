@@ -136,55 +136,51 @@
   }
 
   function shiftRowLeft (y) {
-    var first = house[0][y].info
-    var firstT = house[0][y].sprite.texture
+    var first = house[0][y]
 
     for (var x = 1; x < houseWidth; x++) {
-      house[x - 1][y].info = house[x][y].info
-      house[x - 1][y].sprite.texture = house[x][y].sprite.texture
+      house[x - 1][y] = house[x][y]
+      house[x - 1][y].sprite.position.x = getLocationX(x - 1)
     }
 
-    house[houseWidth - 1][y].info = first
-    house[houseWidth - 1][y].sprite.texture = firstT
+    house[houseWidth - 1][y] = first
+    house[houseWidth - 1][y].sprite.position.x = getLocationX(houseWidth - 1)
   }
 
   function shiftRowRight (y) {
-    var last = house[houseWidth - 1][y].info
-    var lastT = house[houseWidth - 1][y].sprite.texture
+    var last = house[houseWidth - 1][y]
 
     for (var x = houseWidth - 1; x > 0; x--) {
-      house[x][y].info = house[x - 1][y].info
-      house[x][y].sprite.texture = house[x - 1][y].sprite.texture
+      house[x][y] = house[x - 1][y]
+      house[x][y].sprite.position.x = getLocationX(x)
     }
 
-    house[0][y].info = last
-    house[0][y].sprite.texture = lastT
+    house[0][y] = last
+    house[0][y].sprite.position.x = getLocationX(0)
   }
 
   function shiftColumnUp (x) {
-    var first = house[x][0].info
-    var firstT = house[x][0].sprite.texture
+    var first = house[x][0]
 
     for (var y = 1; y < houseHeight; y++) {
-      house[x][y - 1].info = house[x][y].info
-      house[x][y - 1].sprite.texture = house[x][y].sprite.texture
+      house[x][y - 1] = house[x][y]
+      house[x][y - 1].sprite.position.y = getLocationY(y - 1)
     }
 
-    house[x][houseHeight - 1].info = first
-    house[x][houseHeight - 1].sprite.texture = firstT
+    house[x][houseHeight - 1] = first
+    house[x][houseHeight - 1].sprite.position.y = getLocationY(houseHeight - 1)
   }
 
   function shiftColumnDown (x) {
-    var last = house[x][houseHeight - 1].info
-    var lastT = house[x][houseHeight - 1].sprite.texture
+    var last = house[x][houseHeight - 1]
 
     for (var y = houseHeight - 1; y > 0; y--) {
-      house[x][y].info = house[x][y - 1].info
-      house[x][y].sprite.texture = house[x][y - 1].sprite.texture
+      house[x][y] = house[x][y - 1]
+      house[x][y].sprite.position.y = getLocationY(y)
     }
 
-    house[x][0].info = last
-    house[x][0].sprite.texture = lastT
+    house[x][0] = last
+    house[x][0].sprite.position.y = getLocationY(0)
   }
 
   function locationImage (top, left, right, bottom, room) {
@@ -413,10 +409,10 @@
       house[x] = []
       for (var y = 0; y < houseHeight; y++) {
         var info = {
-          top: y > 0 ? house[x][y - 1].info.bottom : Math.random() < 0.6,
-          left: x > 0 ? house[x - 1][y].info.right : Math.random() < 0.6,
-          right: Math.random() < 0.5,
-          bottom: Math.random() < 0.6
+          top: y > 0 ? house[x][y - 1].info.bottom : Math.random() < 0.3,
+          left: x > 0 ? house[x - 1][y].info.right : Math.random() < 0.3,
+          right: Math.random() < 0.3,
+          bottom: Math.random() < 0.3
         }
         var sprite = locationImage(info.top, info.left, info.right, info.bottom)
 
