@@ -17,6 +17,15 @@
 
   PIXI.loader.once('complete', onAssetsLoaded)
 
+  var bubbleTexture = PIXI.Texture.fromImage('images/bubble.png', true, PIXI.SCALE_MODES.NEAREST)
+
+  var personTextures = [
+    PIXI.Texture.fromImage('images/person.png', true, PIXI.SCALE_MODES.NEAREST),
+    PIXI.Texture.fromImage('images/person-anim-1.png', true, PIXI.SCALE_MODES.NEAREST),
+    PIXI.Texture.fromImage('images/person.png', true, PIXI.SCALE_MODES.NEAREST),
+    PIXI.Texture.fromImage('images/person-anim-2.png', true, PIXI.SCALE_MODES.NEAREST)
+  ]
+
   var corridorTextures = {
     'straight': PIXI.Texture.fromImage('images/straight.png', true, PIXI.SCALE_MODES.NEAREST),
     'block': PIXI.Texture.fromImage('images/block.png', true, PIXI.SCALE_MODES.NEAREST),
@@ -311,12 +320,7 @@
   }
 
   function createPerson () {
-    var personAnim = new PIXI.extras.MovieClip([
-      PIXI.Texture.fromImage('images/person.png', true, PIXI.SCALE_MODES.NEAREST),
-      PIXI.Texture.fromImage('images/person-anim-1.png', true, PIXI.SCALE_MODES.NEAREST),
-      PIXI.Texture.fromImage('images/person.png', true, PIXI.SCALE_MODES.NEAREST),
-      PIXI.Texture.fromImage('images/person-anim-2.png', true, PIXI.SCALE_MODES.NEAREST)
-    ])
+    var personAnim = new PIXI.extras.MovieClip(personTextures)
 
     personAnim.scale.set(globalScale, globalScale)
     personAnim.animationSpeed = 0.06
@@ -332,15 +336,29 @@
 
       if (isLocationFree(house[x][y])) {
         location = house[x][y]
-        personAnim.position.set(getLocationX(x), getLocationY(y))
       }
     }
+
+    var bubble = new PIXI.Sprite(bubbleTexture)
+    bubble.anchor.set(0, 1.1)
+    bubble.scale.set(globalScale, globalScale)
+
+    var icon = new PIXI.Sprite(iconTextures[target])
+    icon.anchor.set(-0.3, 1.6)
+    icon.scale.set(globalScale, globalScale)
+
+    var container = new PIXI.Container()
+    container.position.set(getLocationX(x), getLocationY(y))
+    container.addChild(personAnim)
+    container.addChild(bubble)
+    container.addChild(icon)
 
     rowBlocked[y]++
     colBlocked[x]++
 
     var person = {
       animation: personAnim,
+      container: container,
       target: target,
       location: location,
       x: x,
@@ -351,7 +369,7 @@
 
     location.info.person = person
 
-    stage.addChild(personAnim)
+    stage.addChild(container)
 
     return person
   }
@@ -449,9 +467,9 @@
         person.animation.rotation = rotateToAngle(person.animation.rotation, targetAngle, Math.PI / 100)
         person.animation.gotoAndStop(0)
       } else {
-        person.animation.x += sdx
+        person.container.x += sdx
         person.animation.play()
-        var progress = person.animation.x - getLocationX(person.x) - sdx * effectiveTileSize / 2
+        var progress = person.container.x - getLocationX(person.x) - sdx * effectiveTileSize / 2
 
         if (progress + sdx * effectivePersonRadius === 0) {
           colBlocked[person.x + sdx]++
@@ -465,7 +483,7 @@
           person.location = house[person.x + sdx][person.y]
         }
 
-        if (Math.abs(person.animation.x - getLocationX(person.x)) === effectiveTileSize) {
+        if (Math.abs(person.container.x - getLocationX(person.x)) === effectiveTileSize) {
           person.dx += -sdx
           person.x += sdx
         }
@@ -477,9 +495,9 @@
         person.animation.rotation = rotateToAngle(person.animation.rotation, targetAngle, Math.PI / 100)
         person.animation.gotoAndStop(0)
       } else {
-        person.animation.y += sdy
+        person.container.y += sdy
         person.animation.play()
-        progress = person.animation.y - getLocationY(person.y) - sdy * effectiveTileSize / 2
+        progress = person.container.y - getLocationY(person.y) - sdy * effectiveTileSize / 2
 
         if (progress + sdy * effectivePersonRadius === 0) {
           rowBlocked[person.y + sdy]++
@@ -493,7 +511,7 @@
           person.location = house[person.x][person.y + sdy]
         }
 
-        if (Math.abs(person.animation.y - getLocationY(person.y)) === effectiveTileSize) {
+        if (Math.abs(person.container.y - getLocationY(person.y)) === effectiveTileSize) {
           person.dy += -sdy
           person.y += sdy
         }
