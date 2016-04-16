@@ -10,21 +10,14 @@
   var houseHeight = 6
   var house = []
 
-  var images = [
-    'images/block.png',
-    'images/tee.png',
-    'images/dead-end.png',
-    'images/cross.png',
-    'images/straight.png'
-  ]
+  var textureStraight = PIXI.Texture.fromImage('images/straight.png', true, PIXI.SCALE_MODES.NEAREST)
+  var textureBlock = PIXI.Texture.fromImage('images/block.png', true, PIXI.SCALE_MODES.NEAREST)
+  var textureTee = PIXI.Texture.fromImage('images/tee.png', true, PIXI.SCALE_MODES.NEAREST)
+  var textureDeadEnd = PIXI.Texture.fromImage('images/dead-end.png', true, PIXI.SCALE_MODES.NEAREST)
+  var textureCross = PIXI.Texture.fromImage('images/cross.png', true, PIXI.SCALE_MODES.NEAREST)
+  var textureAngle = PIXI.Texture.fromImage('images/angle.png', true, PIXI.SCALE_MODES.NEAREST)
 
-  var roomImages = [
-    {
-      image: 'images/kitchen.png',
-      type: 'kitchen',
-      top: true
-    }
-  ]
+  var availiableTargets = ['kitchen', 'bath', 'toilet', 'gym', 'living', 'sleeping']
 
   var effectiveTileSize = tileSize * globalScale
 
@@ -39,12 +32,6 @@
   document.body.appendChild(renderer.view)
 
   var arrowTexture = PIXI.Texture.fromImage('images/arrow.png', true, PIXI.SCALE_MODES.NEAREST)
-
-  var textures = []
-
-  for (var i = 0; i < images.length; i++) {
-    textures[i] = PIXI.Texture.fromImage(images[i], true, PIXI.SCALE_MODES.NEAREST)
-  }
 
   var deg180 = Math.PI
   var deg45 = Math.PI / 2
@@ -167,43 +154,141 @@
   }
 
   function corridorImage (top, left, right, bottom) {
-    var texture, rotation
+    var texture
+    var rotation = 0
+
+    if (top && bottom && left && right) {
+      texture = textureCross
+    } else if (!top && !bottom && !left && !right) {
+      texture = textureBlock
+    } else if (top && bottom && !left && !right) {
+      texture = textureStraight
+    } else if (!top && !bottom && left && right) {
+      texture = textureStraight
+      rotation = deg45
+    // Dead End
+    } else if (!top && bottom && !left && !right) {
+      texture = textureDeadEnd
+    } else if (!top && !bottom && left && !right) {
+      texture = textureDeadEnd
+      rotation = deg45
+    } else if (!top && !bottom && !left && right) {
+      texture = textureDeadEnd
+      rotation = -deg45
+    } else if (top && !bottom && !left && !right) {
+      texture = textureDeadEnd
+      rotation = deg180
+    // Angle
+    } else if (!top && bottom && left && !right) {
+      texture = textureAngle
+    } else if (!top && bottom && !left && right) {
+      texture = textureAngle
+      rotation = -deg45
+    } else if (top && !bottom && left && !right) {
+      texture = textureAngle
+      rotation = deg45
+    } else if (top && !bottom && !left && right) {
+      texture = textureAngle
+      rotation = deg180
+    // Tee-Junction
+    } else if (!top && bottom && left && right) {
+      texture = textureTee
+    } else if (top && !bottom && left && right) {
+      texture = textureTee
+      rotation = deg180
+    } else if (top && bottom && !left && right) {
+      texture = textureTee
+      rotation = -deg45
+    } else if (top && bottom && left && !right) {
+      texture = textureTee
+      rotation = deg45
+    }
 
     var sprite = new PIXI.Sprite(texture)
-    sprite.anchor.x = 0
-    sprite.anchor.y = 0
     sprite.scale.x = globalScale
     sprite.scale.y = globalScale
+    sprite.pivot.set(0, 0)
+    sprite.anchor.set(0.5, 0.5)
     sprite.rotation = rotation
 
     return sprite
   }
 
+  function isLocationFree (location) {
+    if (location.info.person) return false
+    if (location.info.top) return true
+    if (location.info.bottom) return true
+    if (location.info.left) return true
+    if (location.info.right) return true
+    return false
+  }
+
+  function createPerson () {
+    var personAnim = new PIXI.extras.MovieClip([
+      PIXI.Texture.fromImage('images/person.png', true, PIXI.SCALE_MODES.NEAREST),
+      PIXI.Texture.fromImage('images/person-anim-1.png', true, PIXI.SCALE_MODES.NEAREST),
+      PIXI.Texture.fromImage('images/person.png', true, PIXI.SCALE_MODES.NEAREST),
+      PIXI.Texture.fromImage('images/person-anim-2.png', true, PIXI.SCALE_MODES.NEAREST)
+    ])
+
+    personAnim.scale.set(globalScale, globalScale)
+    personAnim.animationSpeed = 0.06
+    personAnim.anchor.set(0.5, 0.5)
+    var target = availiableTargets[Math.floor(Math.random() * availiableTargets.length)]
+
+    var location = null
+
+    while (!location) {
+      var x = Math.floor(Math.random() * houseWidth)
+      var y = Math.floor(Math.random() * houseHeight)
+      
+      console.log(x, y)
+
+      if (isLocationFree(house[x][y])) {
+        location = house[x][y]
+        personAnim.position.set(getLocationX(x), getLocationY(y))
+      }
+    }
+
+    var person = {
+      animation: personAnim,
+      target: target,
+      location: location
+    }
+
+    location.person = person
+
+    stage.addChild(personAnim)
+
+    return person
+  }
+
+  function getLocationX (col) {
+    return margin + col * effectiveTileSize + effectiveTileSize / 2
+  }
+
+  function getLocationY (row) {
+    return topBarHeight + margin + row * effectiveTileSize + effectiveTileSize / 2
+  }
+
   for (var x = 0; x < houseWidth; x++) {
     house[x] = []
     for (var y = 0; y < houseHeight; y++) {
-      var j = Math.floor(Math.random() * images.length)
-      var sprite = new PIXI.Sprite(textures[j])
+      var info = {
+        top: y > 0 ? house[x][y - 1].info.bottom : Math.random() < 0.6,
+        left: x > 0 ? house[x - 1][y].info.right : Math.random() < 0.6,
+        right: Math.random() < 0.5,
+        bottom: Math.random() < 0.6
+      }
+      var sprite = corridorImage(info.top, info.left, info.right, info.bottom)
 
-      sprite.anchor.x = 0
-      sprite.anchor.y = 0
-
-      sprite.position.x = margin + x * effectiveTileSize
-      sprite.position.y = topBarHeight + margin + y * effectiveTileSize
-      sprite.scale.x = globalScale
-      sprite.scale.y = globalScale
+      sprite.position.x = getLocationX(x)
+      sprite.position.y = getLocationY(y)
 
       stage.addChild(sprite)
 
       house[x][y] = {
-        info:
-        {
-          top: Math.random() < 0.7,
-          left: Math.random() < 0.7,
-          right: Math.random() < 0.7,
-          bottom: Math.random() < 0.7
-        },
-        texture: textures[j],
+        info: info,
         sprite: sprite
       }
     }
@@ -218,8 +303,12 @@
     createArrowSprite(-1, x, 1)
     createArrowSprite(-1, x, -1)
   }
-  main()
 
+  for (i = 0; i < 3; i++) {
+    createPerson()
+  }
+
+  main()
   function main () {
     window.requestAnimationFrame(main)
 
