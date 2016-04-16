@@ -153,6 +153,8 @@
     return sprite
   }
 
+  var pathOutdated = true
+
   function shiftRowLeft (y) {
     var first = house[0][y]
 
@@ -163,6 +165,8 @@
 
     house[houseWidth - 1][y] = first
     house[houseWidth - 1][y].sprite.position.x = getLocationX(houseWidth - 1)
+
+    pathOutdated = true
   }
 
   function shiftRowRight (y) {
@@ -175,6 +179,8 @@
 
     house[0][y] = last
     house[0][y].sprite.position.x = getLocationX(0)
+
+    pathOutdated = true
   }
 
   function shiftColumnUp (x) {
@@ -187,6 +193,8 @@
 
     house[x][houseHeight - 1] = first
     house[x][houseHeight - 1].sprite.position.y = getLocationY(houseHeight - 1)
+
+    pathOutdated = true
   }
 
   function shiftColumnDown (x) {
@@ -199,6 +207,8 @@
 
     house[x][0] = last
     house[x][0].sprite.position.y = getLocationY(0)
+
+    pathOutdated = true
   }
 
   function locationImage (top, left, right, bottom, room) {
@@ -360,7 +370,78 @@
     return current + (negative ? -step : step)
   }
 
+  function findTargetPositions () {
+    var targets = []
+    for (var x = 0; x < houseWidth; x++) {
+      for (var y = 0; y < houseHeight; y++) {
+        if (house[x][y].info.target) {
+          targets.push({
+            x: x,
+            y: y,
+            target: house[x][y].info.target
+          })
+        }
+      }
+    }
+
+    return targets
+  }
+
+  function makePath (paths, x, y) {
+    var path = []
+    var pred = paths[x][y]
+
+    while (pred) {
+      path.push({
+        dx: -pred.dx,
+        dy: -pred.dy
+      })
+      x += pred.dx
+      y += pred.dy
+      pred = paths[x][y]
+    }
+
+    return path.reverse()
+  }
+
+  function formatPaths (paths) {
+    var str = ''
+    for (var y = 0; y < paths[0].length; y++) {
+      for (var x = 0; x < paths.length; x++) {
+        str += paths[x][y] ? 'X' : '.'
+      }
+      str += '\n'
+    }
+    return str
+  }
+
+  function refreshPathForPerson (person) {
+    var paths = findPaths({x: person.x, y: person.y})
+    var targets = findTargetPositions()
+    var path = null
+
+    for (var i = 0; i < targets.length; i++) {
+      if (targets[i].target === person.target) {
+        if (paths[targets[i].x][targets[i].y]) {
+          var newPath = makePath(paths, targets[i].x, targets[i].y)
+          if (!path || newPath.length < path.length) {
+            path = newPath
+          }
+        }
+      }
+    }
+
+    person.path = path
+  }
+
   function updatePerson (person) {
+    if (person.dx === 0 && person.dy === 0 && person.path) {
+      var direction = person.path.shift()
+      if (person.path.length === 0) person.path = null
+      person.dx = direction.dx
+      person.dy = direction.dy
+    }
+
     if (person.dx !== 0) {
       var targetAngle = person.dx > 0 ? -deg45 : deg45
       var sdx = Math.sign(person.dx)
@@ -421,6 +502,97 @@
       person.animation.gotoAndStop(0)
     }
   }
+
+  function findPaths (start) {
+    var dists = []
+    var pred = []
+    for (var x = 0; x < houseWidth; x++) {
+      dists[x] = []
+      pred[x] = []
+      for (var y = 0; y < houseHeight; y++) {
+        dists[x][y] = Infinity
+        pred[x][y] = null
+      }
+    }
+
+    dists[start.x][start.y] = 0
+    var openList = [{x: start.x, y: start.y}]
+    var closedList = []
+    while (openList.length > 0) {
+      var lowInd = 0
+      for (var i = 0; i < openList.length; i++) {
+        if (dists[openList[i].x][openList[i].y] < dists[openList[lowInd].x][openList[lowInd].y]) {
+          lowInd = i
+        }
+      }
+
+      var current = openList.splice(lowInd, 1)[0]
+      var currentDist = dists[current.x][current.y]
+      var location = house[current.x][current.y].info
+
+      if (current.x > 0 && location.left) {
+        var locationLeft = house[current.x - 1][current.y].info
+        var distLeft = dists[current.x - 1][current.y]
+
+        if (locationLeft.right && currentDist + 1 < distLeft) {
+          dists[current.x - 1][current.y] = currentDist + 1
+          pred[current.x - 1][current.y] = { dx: 1, dy: 0 }
+          var left = {x: current.x - 1, y: current.y}
+          if (openList.indexOf(left) === -1 && closedList.indexOf(left) === -1) {
+            openList.push(left)
+          }
+        }
+      }
+
+      if (current.x < houseWidth - 1 && location.right) {
+        var locationRight = house[current.x + 1][current.y].info
+        var distRight = dists[current.x + 1][current.y]
+
+        if (locationRight.left && currentDist + 1 < distRight) {
+          dists[current.x + 1][current.y] = currentDist + 1
+          pred[current.x + 1][current.y] = { dx: -1, dy: 0 }
+          var right = {x: current.x + 1, y: current.y}
+          if (openList.indexOf(right) === -1 && closedList.indexOf(right) === -1) {
+            openList.push(right)
+          }
+        }
+      }
+
+      if (current.y > 0 && location.top) {
+        var locationTop = house[current.x][current.y - 1].info
+        var distTop = dists[current.x][current.y - 1]
+
+        if (locationTop.bottom && currentDist + 1 < distTop) {
+          dists[current.x][current.y - 1] = currentDist + 1
+          pred[current.x][current.y - 1] = { dx: 0, dy: 1 }
+          var top = {x: current.x, y: current.y - 1}
+          if (openList.indexOf(top) === -1 && closedList.indexOf(top) === -1) {
+            openList.push(top)
+          }
+        }
+      }
+
+      if (current.y < houseHeight - 1 && location.bottom) {
+        var locationBottom = house[current.x][current.y + 1].info
+        var distBottom = dists[current.x][current.y + 1]
+
+        if (locationBottom.top && currentDist + 1 < distBottom) {
+          dists[current.x][current.y + 1] = currentDist + 1
+          pred[current.x][current.y + 1] = { dx: 0, dy: -1 }
+          var bottom = {x: current.x, y: current.y + 1}
+          if (openList.indexOf(bottom) === -1 && closedList.indexOf(bottom) === -1) {
+            openList.push(bottom)
+          }
+        }
+      }
+
+      closedList.push(current)
+    }
+
+    return pred
+  }
+
+  var person
 
   function generateLevel () {
     for (var x = 0; x < houseWidth; x++) {
@@ -483,13 +655,10 @@
     grid.alpha = 0.5
     stage.addChild(grid)
 
-    var person = createPerson()
-    person.dx = -3 + Math.floor(Math.random() * 7)
-    person.dy = -3 + Math.floor(Math.random() * 7)
+    person = createPerson()
   }
 
   function onAssetsLoaded () {
-    console.log('loaded')
     generateLevel()
     refreshArrows()
 
@@ -499,7 +668,12 @@
   function main () {
     window.requestAnimationFrame(main)
 
-    // updatePerson(person)
+    if (pathOutdated) {
+      refreshPathForPerson(person)
+      pathOutdated = false
+    }
+
+    updatePerson(person)
     refreshArrows()
 
     renderer.render(stage)
