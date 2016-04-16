@@ -59,6 +59,8 @@
     'living': PIXI.Texture.fromImage('images/icon-living.png', true, PIXI.SCALE_MODES.NEAREST)
   }
 
+  var floorTexture = PIXI.Texture.fromImage('images/floor.png', true, PIXI.SCALE_MODES.NEAREST)
+
   var desaturateFilter = new PIXI.filters.ColorMatrixFilter()
   desaturateFilter.desaturate()
 
@@ -79,7 +81,7 @@
 
   var renderer = PIXI.autoDetectRenderer(renderWidth, renderHeight,
     {
-      backgroundColor: 0xFFFFFF
+      backgroundColor: 0x000000
     }
   )
   document.body.appendChild(renderer.view)
@@ -771,6 +773,12 @@
   var persons = []
 
   function generateLevel () {
+    var floorSprite = new PIXI.extras.TilingSprite(floorTexture, houseWidth * effectiveTileSize, houseHeight * effectiveTileSize)
+    floorSprite.tileScale.set(globalScale, globalScale)
+    floorSprite.position.set(margin, margin + topBarHeight)
+
+    stage.addChild(floorSprite)
+
     for (var x = 0; x < houseWidth; x++) {
       house[x] = []
       for (var y = 0; y < houseHeight; y++) {
