@@ -2,10 +2,13 @@
   var margin = 40
   var globalScale = 3
   var tileSize = 32
-  var topBarHeight = 40
+  var topBarHeight = 50
   var topBarBackground = 0x666666
   var topBarColor = 0xFFFFFF
   var personRadius = 12 / 2
+  var iconFadeTime = 1500
+  var currentMood = 100
+  var idleTime = 2000
 
   var houseWidth = 10
   var houseHeight = 6
@@ -18,6 +21,9 @@
   PIXI.loader.once('complete', onAssetsLoaded)
 
   var bubbleTexture = PIXI.Texture.fromImage('images/bubble.png', true, PIXI.SCALE_MODES.NEAREST)
+  var moodGoodTexture = PIXI.Texture.fromImage('images/mood-good.png', true, PIXI.SCALE_MODES.NEAREST)
+  var moodBadTexture = PIXI.Texture.fromImage('images/mood-bad.png', true, PIXI.SCALE_MODES.NEAREST)
+  var moodNeutralTexture = PIXI.Texture.fromImage('images/mood-neutral.png', true, PIXI.SCALE_MODES.NEAREST)
 
   var personTextures = [
     PIXI.Texture.fromImage('images/person.png', true, PIXI.SCALE_MODES.NEAREST),
@@ -80,12 +86,12 @@
   var deg45 = Math.PI / 2
   var stage = new PIXI.Container()
 
-  var pointsText = new PIXI.Text('Points: 0',
+  var pointsText = new PIXI.Text(currentMood,
     {
       font: '16px Arial',
       fill: topBarColor
     })
-  pointsText.x = 5
+  pointsText.x = 50
   pointsText.y = topBarHeight / 2
   pointsText.anchor.x = 0
   pointsText.anchor.y = 0.5
@@ -96,6 +102,10 @@
 
   stage.addChild(topBar)
   stage.addChild(pointsText)
+
+  function getMoodTexture (mood) {
+    return mood >= 50 ? moodGoodTexture : mood <= -50 ? moodBadTexture : moodNeutralTexture
+  }
 
   function createGrid (w, h, size, color) {
     var grid = new PIXI.Graphics()
@@ -325,6 +335,8 @@
     personAnim.scale.set(globalScale, globalScale)
     personAnim.animationSpeed = 0.06
     personAnim.anchor.set(0.5, 0.5)
+    personAnim.interactive = true
+
     var target = availiableTargets[Math.floor(Math.random() * availiableTargets.length)]
 
     var location = null
@@ -343,15 +355,21 @@
     bubble.anchor.set(0, 1.1)
     bubble.scale.set(globalScale, globalScale)
 
-    var icon = new PIXI.Sprite(iconTextures[target])
-    icon.anchor.set(-0.3, 1.6)
-    icon.scale.set(globalScale, globalScale)
+    var targetIcon = new PIXI.Sprite(iconTextures[target])
+    targetIcon.anchor.set(-0.3, 1.6)
+    targetIcon.scale.set(globalScale, globalScale)
+
+    var moodIcon = new PIXI.Sprite(getMoodTexture(100))
+    moodIcon.anchor.set(1, 1.6)
+    moodIcon.scale.set(2, 2)
+    moodIcon.visible = false
 
     var container = new PIXI.Container()
     container.position.set(getLocationX(x), getLocationY(y))
     container.addChild(personAnim)
     container.addChild(bubble)
-    container.addChild(icon)
+    container.addChild(targetIcon)
+    container.addChild(moodIcon)
 
     rowBlocked[y]++
     colBlocked[x]++
@@ -361,11 +379,31 @@
       container: container,
       target: target,
       location: location,
+      targetIcon: targetIcon,
+      moodIcon: moodIcon,
       x: x,
       y: y,
       dx: 0,
-      dy: 0
+      dy: 0,
+      happiness: 100
     }
+
+    personAnim.on('mouseover', function () {
+      moodIcon.alpha = 0
+      moodIcon.visible = true
+      createjs.Tween.get(person.moodIcon)
+        .to({ alpha: 1 }, 500, createjs.Ease.getPowInOut(4))
+      if (person.iconTimeout) {
+        window.clearTimeout(person.iconTimeout)
+        person.iconTimeout = null
+      }
+    })
+    personAnim.on('mouseout', function () {
+      person.iconTimeout = window.setTimeout(function () {
+        createjs.Tween.get(person.moodIcon)
+          .to({ alpha: 0 }, 500, createjs.Ease.getPowInOut(4))
+      }, iconFadeTime)
+    })
 
     location.info.person = person
 
@@ -452,13 +490,53 @@
     person.path = path
   }
 
-  function updatePerson (person) {
-    if (person.dx === 0 && person.dy === 0 && person.path) {
-      var direction = person.path.shift()
-      if (person.path.length === 0) person.path = null
-      person.dx = direction.dx
-      person.dy = direction.dy
+  function getPossibleDirectionsForPerson (person) {
+    var paths = findPaths({x: person.x, y: person.y})
+
+    var possibilities = []
+    if (person.x > 0 && paths[person.x - 1][person.y]) {
+      possibilities.push({dx: -1, dy: 0})
     }
+    if (person.x < houseWidth - 1 && paths[person.x + 1][person.y]) {
+      possibilities.push({dx: 1, dy: 0})
+    }
+    if (person.y > 0 && paths[person.x][person.y - 1]) {
+      possibilities.push({dx: 0, dy: -1})
+    }
+    if (person.y < houseHeight - 1 && paths[person.x][person.y + 1]) {
+      possibilities.push({dx: 0, dy: 1})
+    }
+
+    return possibilities
+  }
+
+  function updatePerson (person) {
+    if (person.dx === 0 && person.dy === 0) {
+      if (person.path) {
+        var direction = person.path.shift()
+        if (person.path.length === 0) person.path = null
+        person.dx = direction.dx
+        person.dy = direction.dy
+
+        person.mood = 100
+      } else if (!person.idleTimeout) {
+        person.idleTimeout = window.setTimeout(function () {
+          person.idleTimeout = null
+          var dirs = getPossibleDirectionsForPerson(person)
+
+          if (dirs.length > 0) {
+            var i = Math.floor(Math.random() * dirs.length)
+            person.dx = dirs[i].dx
+            person.dy = dirs[i].dy
+            person.mood = 0
+          } else {
+            person.mood = -100
+          }
+        }, idleTime)
+      }
+    }
+
+    person.moodIcon.texture = getMoodTexture(person.mood)
 
     if (person.dx !== 0) {
       var targetAngle = person.dx > 0 ? -deg45 : deg45
@@ -672,6 +750,13 @@
     grid.position.set(margin, margin + topBarHeight)
     grid.alpha = 0.5
     stage.addChild(grid)
+
+    var moodIcon = getMoodTexture(currentMood)
+    var moodSprite = new PIXI.Sprite(moodIcon)
+    moodSprite.anchor.set(0, 0.5)
+    moodSprite.position.set(5, topBarHeight / 2)
+    moodSprite.scale.set(2, 2)
+    stage.addChild(moodSprite)
 
     person = createPerson()
   }

@@ -2,7 +2,7 @@
 {
     "javascript.validate.syntaxValidation": false ,
     "standard.options": {
-        "globals": ["$", "PIXI"]
+        "globals": ["$", "PIXI", "createjs"]
     },
     "editor.tabSize": 2
 }
