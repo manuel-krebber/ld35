@@ -88,6 +88,24 @@
   stage.addChild(topBar)
   stage.addChild(pointsText)
 
+  function createGrid (w, h, size, color) {
+    var grid = new PIXI.Graphics()
+
+    for (var x = 1; x < w; x++) {
+      grid.beginFill(color)
+      grid.drawRect(x * size - 1, 0, 2, h * size)
+      grid.endFill()
+    }
+
+    for (var y = 1; y < h; y++) {
+      grid.beginFill(color)
+      grid.drawRect(0, y * size - 1, w * size, 2)
+      grid.endFill()
+    }
+
+    return grid
+  }
+
   function createArrowSprite (row, column, dir) {
     var sprite = new PIXI.Sprite(arrowTexture)
 
@@ -459,6 +477,11 @@
         }
       }
     }
+
+    var grid = createGrid(houseWidth, houseHeight, effectiveTileSize, 0x666666)
+    grid.position.set(margin, margin + topBarHeight)
+    grid.alpha = 0.5
+    stage.addChild(grid)
 
     var person = createPerson()
     person.dx = -3 + Math.floor(Math.random() * 7)
