@@ -7,14 +7,15 @@
   var topBarColor = 0xFFFFFF
   var personRadius = 12 / 2
   var iconFadeTime = 1500
-  var currentMood = 100
   var idleTime = 2000
+  var initialMood = 100
 
   var houseWidth = 10
   var houseHeight = 6
-  var house = []
-  var numRooms = 3
-  var numPersons = 1
+  var numRooms = 6
+  var numPersons = 3
+  var gridColor = 0x666666
+  var gridAlpha = 0.6
 
   PIXI.loader.add('corridor-straight', 'images/straight.png')
   PIXI.loader.add('arrow', 'images/arrow.png')
@@ -60,24 +61,18 @@
   }
 
   var floorTexture = PIXI.Texture.fromImage('images/floor.png', true, PIXI.SCALE_MODES.NEAREST)
+  var arrowTexture = PIXI.Texture.fromImage('images/arrow.png', true, PIXI.SCALE_MODES.NEAREST)
 
   var desaturateFilter = new PIXI.filters.ColorMatrixFilter()
   desaturateFilter.desaturate()
 
   var targets = ['kitchen', 'bath', 'toilet', 'gym', 'living', 'sleeping']
-  var availiableTargets = []
 
   var effectivePersonRadius = personRadius * globalScale
   var effectiveTileSize = tileSize * globalScale
 
   var renderWidth = effectiveTileSize * houseWidth + 2 * margin
   var renderHeight = effectiveTileSize * houseHeight + 2 * margin + topBarHeight
-
-  var rowsScrolling = false
-  var rowBlocked = Array(houseHeight).fill(0)
-  var colBlocked = Array(houseWidth).fill(0)
-  var rowArrows = []
-  var colArrows = []
 
   var renderer = PIXI.autoDetectRenderer(renderWidth, renderHeight,
     {
@@ -86,30 +81,9 @@
   )
   document.body.appendChild(renderer.view)
 
-  var arrowTexture = PIXI.Texture.fromImage('images/arrow.png', true, PIXI.SCALE_MODES.NEAREST)
-
   var deg180 = Math.PI
   var deg45 = Math.PI / 2
   var stage = new PIXI.Container()
-
-  var moodText = new PIXI.Text(currentMood,
-    {
-      font: '16px Arial',
-      fill: topBarColor
-    })
-  moodText.x = 50
-  moodText.y = topBarHeight / 2
-  moodText.anchor.x = 0
-  moodText.anchor.y = 0.5
-
-  var moodSprite
-
-  var topBar = new PIXI.Graphics()
-  topBar.beginFill(topBarBackground)
-  topBar.drawRect(0, 0, renderWidth, topBarHeight)
-
-  stage.addChild(topBar)
-  stage.addChild(moodText)
 
   function getMoodTexture (mood) {
     return mood >= 50 ? moodGoodTexture : mood <= -50 ? moodBadTexture : moodNeutralTexture
@@ -131,111 +105,6 @@
     }
 
     return grid
-  }
-
-  function createArrowSprite (row, column, dir) {
-    var sprite = new PIXI.Sprite(arrowTexture)
-
-    sprite.anchor.x = 0
-    sprite.anchor.y = 0.5
-
-    if (row >= 0) {
-      if (dir < 0) {
-        sprite.position.x = margin - 2
-        sprite.rotation = deg180
-      } else {
-        sprite.position.x = renderWidth - margin + 2
-      }
-
-      sprite.position.y = getLocationY(row)
-    } else {
-      if (dir < 0) {
-        sprite.position.y = topBarHeight + margin - 2
-        sprite.rotation = -deg45
-      } else {
-        sprite.position.y = renderHeight - margin + 2
-        sprite.rotation = deg45
-      }
-
-      sprite.position.x = getLocationX(column)
-    }
-
-    sprite.scale.x = globalScale
-    sprite.scale.y = globalScale
-
-    sprite.interactive = true
-
-    stage.addChild(sprite)
-
-    sprite.on('click', function () {
-      if (row >= 0) {
-        if (dir < 0) shiftRowLeft(row, dir)
-        else shiftRowRight(row, dir)
-      } else {
-        if (dir < 0) shiftColumnUp(column, dir)
-        else shiftColumnDown(column, dir)
-      }
-    })
-
-    return sprite
-  }
-
-  var pathOutdated = true
-
-  function shiftRowLeft (y) {
-    var first = house[0][y]
-
-    for (var x = 1; x < houseWidth; x++) {
-      house[x - 1][y] = house[x][y]
-      house[x - 1][y].sprite.position.x = getLocationX(x - 1)
-    }
-
-    house[houseWidth - 1][y] = first
-    house[houseWidth - 1][y].sprite.position.x = getLocationX(houseWidth - 1)
-
-    pathOutdated = true
-  }
-
-  function shiftRowRight (y) {
-    var last = house[houseWidth - 1][y]
-
-    for (var x = houseWidth - 1; x > 0; x--) {
-      house[x][y] = house[x - 1][y]
-      house[x][y].sprite.position.x = getLocationX(x)
-    }
-
-    house[0][y] = last
-    house[0][y].sprite.position.x = getLocationX(0)
-
-    pathOutdated = true
-  }
-
-  function shiftColumnUp (x) {
-    var first = house[x][0]
-
-    for (var y = 1; y < houseHeight; y++) {
-      house[x][y - 1] = house[x][y]
-      house[x][y - 1].sprite.position.y = getLocationY(y - 1)
-    }
-
-    house[x][houseHeight - 1] = first
-    house[x][houseHeight - 1].sprite.position.y = getLocationY(houseHeight - 1)
-
-    pathOutdated = true
-  }
-
-  function shiftColumnDown (x) {
-    var last = house[x][houseHeight - 1]
-
-    for (var y = houseHeight - 1; y > 0; y--) {
-      house[x][y] = house[x][y - 1]
-      house[x][y].sprite.position.y = getLocationY(y)
-    }
-
-    house[x][0] = last
-    house[x][0].sprite.position.y = getLocationY(0)
-
-    pathOutdated = true
   }
 
   function locationImage (top, left, right, bottom, room) {
@@ -320,24 +189,7 @@
     return false
   }
 
-  function refreshArrows () {
-    for (var x = 0; x < houseWidth; x++) {
-      var blocked = colBlocked[x] > 0
-      colArrows[2 * x].visible = !blocked
-      colArrows[2 * x + 1].visible = !blocked
-      colArrows[2 * x].filters = rowsScrolling ? [desaturateFilter] : null
-      colArrows[2 * x + 1].filters = rowsScrolling ? [desaturateFilter] : null
-    }
-    for (var y = 0; y < houseHeight; y++) {
-      blocked = rowBlocked[y] > 0
-      rowArrows[2 * y].visible = !blocked
-      rowArrows[2 * y + 1].visible = !blocked
-      rowArrows[2 * y].filters = rowsScrolling ? [desaturateFilter] : null
-      rowArrows[2 * y + 1].filters = rowsScrolling ? [desaturateFilter] : null
-    }
-  }
-
-  function createPerson () {
+  function createPerson (house) {
     var personAnim = new PIXI.extras.MovieClip(personTextures)
 
     personAnim.scale.set(globalScale, globalScale)
@@ -345,17 +197,17 @@
     personAnim.anchor.set(0.5, 0.5)
     personAnim.interactive = true
 
-    var target = availiableTargets[Math.floor(Math.random() * availiableTargets.length)]
+    var target = house.rooms[Math.floor(Math.random() * house.rooms.length)].info.target
 
     var location = null
     var x, y
 
     while (!location) {
-      x = Math.floor(Math.random() * houseWidth)
-      y = Math.floor(Math.random() * houseHeight)
+      x = Math.floor(Math.random() * house.width)
+      y = Math.floor(Math.random() * house.height)
 
-      if (isLocationFree(house[x][y])) {
-        location = house[x][y]
+      if (isLocationFree(house.locations[x][y])) {
+        location = house.locations[x][y]
       }
     }
 
@@ -379,8 +231,8 @@
     container.addChild(targetIcon)
     container.addChild(moodIcon)
 
-    rowBlocked[y]++
-    colBlocked[x]++
+    house.rowBlocked[y]++
+    house.colBlocked[x]++
 
     var person = {
       animation: personAnim,
@@ -416,8 +268,6 @@
 
     location.info.person = person
 
-    stage.addChild(container)
-
     return person
   }
 
@@ -435,15 +285,15 @@
     return current + (negative ? -step : step)
   }
 
-  function findTargetPositions () {
+  function findTargetPositions (house) {
     var targets = []
-    for (var x = 0; x < houseWidth; x++) {
-      for (var y = 0; y < houseHeight; y++) {
-        if (house[x][y].info.target) {
+    for (var x = 0; x < house.width; x++) {
+      for (var y = 0; y < house.height; y++) {
+        if (house.locations[x][y].info.target) {
           targets.push({
             x: x,
             y: y,
-            target: house[x][y].info.target
+            target: house.locations[x][y].info.target
           })
         }
       }
@@ -451,21 +301,6 @@
 
     return targets
   }
-
-  function refreshMoodDisplay () {
-    moodText.text = '' + currentMood
-    moodSprite.texture = getMoodTexture(currentMood)
-  }
-
-  function updateMood () {
-    for (var i = 0; i < numPersons; i++) {
-      currentMood -= persons[i].mood > 0 ? 0 : persons[i].mood < 0 ? 3 : 1
-    }
-
-    refreshMoodDisplay()
-  }
-
-  window.setInterval(updateMood, 5000)
 
   function makePath (paths, x, y) {
     var path = []
@@ -495,13 +330,13 @@
     return str
   }
 
-  function refreshPathForPerson (person) {
-    checkCollisionForPerson(person)
+  function refreshPathForPerson (house, person) {
+    checkCollisionForPerson(house, person)
 
     if (!person.target) return
 
-    var paths = findPaths({x: person.x + person.dx, y: person.y + person.dy})
-    var targets = findTargetPositions()
+    var paths = findPaths(house, {x: person.x + person.dx, y: person.y + person.dy})
+    var targets = findTargetPositions(house)
     var path = null
 
     for (var i = 0; i < targets.length; i++) {
@@ -518,22 +353,8 @@
     person.path = path
   }
 
-  function canMove (x, y, dx, dy) {
-    dx = Math.sign(dx)
-    dy = Math.sign(dy)
-    if (x + dx < 0 || x + dx >= houseWidth) return false
-    if (y + dy < 0 || y + dy >= houseHeight) return false
-    var self = house[x][y].info
-    var other = house[x + dx][y + dy].info
-
-    return (dx > 0 && self.right && other.left) ||
-      (dx < 0 && self.left && other.right) ||
-      (dy > 0 && self.bottom && other.top) ||
-      (dy < 0 && self.top && other.bottom)
-  }
-
-  function checkCollisionForPerson (person) {
-    if (!canMove(person.x, person.y, person.dx, person.dy)) {
+  function checkCollisionForPerson (house, person) {
+    if (!house.canMove(person.x, person.y, person.dx, person.dy)) {
       if (person.container.position.x !== getLocationX(person.x) ||
           person.container.position.y !== getLocationY(person.y)) {
         person.x += person.dx
@@ -546,18 +367,18 @@
     }
   }
 
-  function getPossibleDirectionsForPerson (person) {
+  function getPossibleDirectionsForPerson (house, person) {
     var possibilities = []
-    if (canMove(person.x, person.y, -1, 0)) {
+    if (house.canMove(person.x, person.y, -1, 0)) {
       possibilities.push({dx: -1, dy: 0})
     }
-    if (canMove(person.x, person.y, 1, 0)) {
+    if (house.canMove(person.x, person.y, 1, 0)) {
       possibilities.push({dx: 1, dy: 0})
     }
-    if (canMove(person.x, person.y, 0, -1)) {
+    if (house.canMove(person.x, person.y, 0, -1)) {
       possibilities.push({dx: 0, dy: -1})
     }
-    if (canMove(person.x, person.y, 0, 1)) {
+    if (house.canMove(person.x, person.y, 0, 1)) {
       possibilities.push({dx: 0, dy: 1})
     }
 
@@ -566,25 +387,22 @@
 
   function changePersonMood (person, newMood) {
     if (person.mood !== newMood) {
-      console.log('new mood', person.iconTimeout)
       person.moodIcon.texture = getMoodTexture(newMood)
 
       if (!person.iconTimeout) {
         createjs.Tween.get(person.moodIcon)
           .to({ alpha: 1 }, 500, createjs.Ease.getPowInOut(4))
         person.iconTimeout = window.setTimeout(function () {
-          console.log('to!', person.iconTimeout)
           createjs.Tween.get(person.moodIcon)
             .to({ alpha: 0 }, 500, createjs.Ease.getPowInOut(4))
           person.iconTimeout = null
         }, iconFadeTime + 500)
-        console.log('to?', person.iconTimeout)
       }
     }
     person.mood = newMood
   }
 
-  function updatePerson (person) {
+  function updatePerson (house, person) {
     if (person.dx === 0 && person.dy === 0) {
       if (person.path) {
         var direction = person.path.shift()
@@ -596,7 +414,7 @@
       } else if (!person.idleTimeout) {
         person.idleTimeout = window.setTimeout(function () {
           person.idleTimeout = null
-          var dirs = getPossibleDirectionsForPerson(person)
+          var dirs = getPossibleDirectionsForPerson(house, person)
 
           if (dirs.length > 0) {
             var i = Math.floor(Math.random() * dirs.length)
@@ -610,7 +428,7 @@
       }
     }
 
-    if (house[person.x][person.y].info.target === person.target) {
+    if (house.locations[person.x][person.y].info.target === person.target) {
       person.target = null
       createjs.Tween.get(person.bubble)
         .to({ alpha: 0 }, 500, createjs.Ease.getPowInOut(4))
@@ -632,15 +450,15 @@
         var progress = person.container.x - getLocationX(person.x) - sdx * effectiveTileSize / 2
 
         if (progress + sdx * effectivePersonRadius === 0) {
-          colBlocked[person.x + sdx]++
+          house.colBlocked[person.x + sdx]++
         }
         if (progress - sdx * effectivePersonRadius === 0) {
-          colBlocked[person.x]--
+          house.colBlocked[person.x]--
         }
         if (progress === 0) {
-          house[person.x][person.y].info.person = null
-          house[person.x + sdx][person.y].info.person = person
-          person.location = house[person.x + sdx][person.y]
+          house.locations[person.x][person.y].info.person = null
+          house.locations[person.x + sdx][person.y].info.person = person
+          person.location = house.locations[person.x + sdx][person.y]
         }
 
         if (Math.abs(person.container.x - getLocationX(person.x)) === effectiveTileSize) {
@@ -660,15 +478,15 @@
         progress = person.container.y - getLocationY(person.y) - sdy * effectiveTileSize / 2
 
         if (progress + sdy * effectivePersonRadius === 0) {
-          rowBlocked[person.y + sdy]++
+          house.rowBlocked[person.y + sdy]++
         }
         if (progress - sdy * effectivePersonRadius === 0) {
-          rowBlocked[person.y]--
+          house.rowBlocked[person.y]--
         }
         if (progress === 0) {
-          house[person.x][person.y].info.person = null
-          house[person.x][person.y + sdy].info.person = person
-          person.location = house[person.x][person.y + sdy]
+          house.locations[person.x][person.y].info.person = null
+          house.locations[person.x][person.y + sdy].info.person = person
+          person.location = house.locations[person.x][person.y + sdy]
         }
 
         if (Math.abs(person.container.y - getLocationY(person.y)) === effectiveTileSize) {
@@ -681,13 +499,13 @@
     }
   }
 
-  function findPaths (start) {
+  function findPaths (house, start) {
     var dists = []
     var pred = []
-    for (var x = 0; x < houseWidth; x++) {
+    for (var x = 0; x < house.width; x++) {
       dists[x] = []
       pred[x] = []
-      for (var y = 0; y < houseHeight; y++) {
+      for (var y = 0; y < house.height; y++) {
         dists[x][y] = Infinity
         pred[x][y] = null
       }
@@ -706,10 +524,10 @@
 
       var current = openList.splice(lowInd, 1)[0]
       var currentDist = dists[current.x][current.y]
-      var location = house[current.x][current.y].info
+      var location = house.locations[current.x][current.y].info
 
       if (current.x > 0 && location.left) {
-        var locationLeft = house[current.x - 1][current.y].info
+        var locationLeft = house.locations[current.x - 1][current.y].info
         var distLeft = dists[current.x - 1][current.y]
 
         if (locationLeft.right && currentDist + 1 < distLeft) {
@@ -722,8 +540,8 @@
         }
       }
 
-      if (current.x < houseWidth - 1 && location.right) {
-        var locationRight = house[current.x + 1][current.y].info
+      if (current.x < house.width - 1 && location.right) {
+        var locationRight = house.locations[current.x + 1][current.y].info
         var distRight = dists[current.x + 1][current.y]
 
         if (locationRight.left && currentDist + 1 < distRight) {
@@ -737,7 +555,7 @@
       }
 
       if (current.y > 0 && location.top) {
-        var locationTop = house[current.x][current.y - 1].info
+        var locationTop = house.locations[current.x][current.y - 1].info
         var distTop = dists[current.x][current.y - 1]
 
         if (locationTop.bottom && currentDist + 1 < distTop) {
@@ -750,8 +568,8 @@
         }
       }
 
-      if (current.y < houseHeight - 1 && location.bottom) {
-        var locationBottom = house[current.x][current.y + 1].info
+      if (current.y < house.height - 1 && location.bottom) {
+        var locationBottom = house.locations[current.x][current.y + 1].info
         var distBottom = dists[current.x][current.y + 1]
 
         if (locationBottom.top && currentDist + 1 < distBottom) {
@@ -770,108 +588,359 @@
     return pred
   }
 
-  var persons = []
+  function generateHouse (w, h, roomCount, fillFactor) {
+    var house = {
+      width: w,
+      height: h,
+      fillFactor: fillFactor,
+      roomCount: roomCount,
+      locations: [],
+      container: new PIXI.Container(),
+      rowBlocked: Array(h).fill(0),
+      colBlocked: Array(w).fill(0),
 
-  function generateLevel () {
-    var floorSprite = new PIXI.extras.TilingSprite(floorTexture, houseWidth * effectiveTileSize, houseHeight * effectiveTileSize)
-    floorSprite.tileScale.set(globalScale, globalScale)
-    floorSprite.position.set(margin, margin + topBarHeight)
+      shiftLeft: function shiftLeft (y) {
+        var first = house.locations[0][y]
 
-    stage.addChild(floorSprite)
+        for (var x = 1; x < house.width; x++) {
+          house.locations[x - 1][y] = house.locations[x][y]
+          house.locations[x - 1][y].sprite.position.x = getLocationX(x - 1)
+        }
 
-    for (var x = 0; x < houseWidth; x++) {
-      house[x] = []
-      for (var y = 0; y < houseHeight; y++) {
+        house.locations[house.width - 1][y] = first
+        house.locations[house.width - 1][y].sprite.position.x = getLocationX(house.width - 1)
+      },
+
+      shiftRight: function shiftRight (y) {
+        var last = house.locations[house.width - 1][y]
+
+        for (var x = house.width - 1; x > 0; x--) {
+          house.locations[x][y] = house.locations[x - 1][y]
+          house.locations[x][y].sprite.position.x = getLocationX(x)
+        }
+
+        house.locations[0][y] = last
+        house.locations[0][y].sprite.position.x = getLocationX(0)
+      },
+
+      shiftUp: function shiftUp (x) {
+        var first = house.locations[x][0]
+
+        for (var y = 1; y < house.height; y++) {
+          house.locations[x][y - 1] = house.locations[x][y]
+          house.locations[x][y - 1].sprite.position.y = getLocationY(y - 1)
+        }
+
+        house.locations[x][house.height - 1] = first
+        house.locations[x][house.height - 1].sprite.position.y = getLocationY(house.height - 1)
+      },
+
+      shiftDown: function shiftDown (x) {
+        var last = house.locations[x][house.height - 1]
+
+        for (var y = house.height - 1; y > 0; y--) {
+          house.locations[x][y] = house.locations[x][y - 1]
+          house.locations[x][y].sprite.position.y = getLocationY(y)
+        }
+
+        house.locations[x][0] = last
+        house.locations[x][0].sprite.position.y = getLocationY(0)
+      },
+
+      canMove: function canMove (x, y, dx, dy) {
+        dx = Math.sign(dx)
+        dy = Math.sign(dy)
+        if (x + dx < 0 || x + dx >= house.width) return false
+        if (y + dy < 0 || y + dy >= house.height) return false
+        var self = house.locations[x][y].info
+        var other = house.locations[x + dx][y + dy].info
+
+        return (dx > 0 && self.right && other.left) ||
+          (dx < 0 && self.left && other.right) ||
+          (dy > 0 && self.bottom && other.top) ||
+          (dy < 0 && self.top && other.bottom)
+      }
+    }
+
+    for (var x = 0; x < w; x++) {
+      house.locations[x] = []
+      for (var y = 0; y < h; y++) {
         var info = {
-          top: y > 0 ? house[x][y - 1].info.bottom : false,
-          left: x > 0 ? house[x - 1][y].info.right : false,
-          right: x < houseWidth - 1 ? Math.random() < 0.3 : false,
-          bottom: y < houseHeight - 1 ? Math.random() < 0.3 : false
+          top: y > 0 ? house.locations[x][y - 1].info.bottom : false,
+          left: x > 0 ? house.locations[x - 1][y].info.right : false,
+          right: x < w - 1 ? Math.random() < fillFactor : false,
+          bottom: y < h - 1 ? Math.random() < fillFactor : false
         }
         var sprite = locationImage(info.top, info.left, info.right, info.bottom)
 
         sprite.position.x = getLocationX(x)
         sprite.position.y = getLocationY(y)
 
-        stage.addChild(sprite)
+        house.container.addChild(sprite)
 
-        house[x][y] = {
+        house.locations[x][y] = {
           info: info,
           sprite: sprite
         }
       }
     }
 
-    for (y = 0; y < houseHeight; y++) {
-      rowArrows.push(createArrowSprite(y, -1, 1))
-      rowArrows.push(createArrowSprite(y, -1, -1))
+    return house
+  }
+
+  function generateArrows (house) {
+    var leftArrows = new PIXI.Container()
+    var rightArrows = new PIXI.Container()
+    rightArrows.position.x = house.width * effectiveTileSize
+    var rowArrows = []
+    var colArrows = []
+
+    function wrapClickHandler (arrow, handler, param) {
+      arrow.on('click', function () {
+        handler(param)
+        house.level.pathsOutdated = true
+      })
     }
 
-    for (x = 0; x < houseWidth; x++) {
-      colArrows.push(createArrowSprite(-1, x, 1))
-      colArrows.push(createArrowSprite(-1, x, -1))
+    for (var y = 0; y < house.height; y++) {
+      var leftArrow = createArrowSprite(y, -1, -1)
+      wrapClickHandler(leftArrow, house.shiftLeft, y)
+      leftArrows.addChild(leftArrow)
+      rowArrows.push(leftArrow)
+
+      var rightArrow = createArrowSprite(y, -1, 1)
+      wrapClickHandler(rightArrow, house.shiftRight, y)
+      rightArrows.addChild(rightArrow)
+      rowArrows.push(rightArrow)
     }
 
+    var topArrows = new PIXI.Container()
+    var bottomArrows = new PIXI.Container()
+    bottomArrows.position.y = house.height * effectiveTileSize
+    for (var x = 0; x < house.width; x++) {
+      var topArrow = createArrowSprite(-1, x, -1)
+      topArrows.addChild(topArrow)
+      wrapClickHandler(topArrow, house.shiftUp, x)
+      colArrows.push(topArrow)
+
+      var bottomArrow = createArrowSprite(-1, x, 1)
+      bottomArrows.addChild(bottomArrow)
+      wrapClickHandler(bottomArrow, house.shiftDown, x)
+      colArrows.push(bottomArrow)
+    }
+
+    var container = new PIXI.Container()
+    container.addChild(leftArrows)
+    container.addChild(rightArrows)
+    container.addChild(topArrows)
+    container.addChild(bottomArrows)
+
+    var scrolling = false
+
+    return {
+      left: leftArrows,
+      right: rightArrows,
+      top: topArrows,
+      bottom: bottomArrows,
+      container: container,
+      refresh: function refreshArrows () {
+        for (var x = 0; x < house.width; x++) {
+          var blocked = house.colBlocked[x] > 0
+          colArrows[2 * x].visible = !blocked
+          colArrows[2 * x + 1].visible = !blocked
+          colArrows[2 * x].filters = scrolling ? [desaturateFilter] : null
+          colArrows[2 * x + 1].filters = scrolling ? [desaturateFilter] : null
+        }
+        for (var y = 0; y < house.height; y++) {
+          blocked = house.rowBlocked[y] > 0
+          rowArrows[2 * y].visible = !blocked
+          rowArrows[2 * y + 1].visible = !blocked
+          rowArrows[2 * y].filters = scrolling ? [desaturateFilter] : null
+          rowArrows[2 * y + 1].filters = scrolling ? [desaturateFilter] : null
+        }
+      }
+    }
+  }
+
+  function createArrowSprite (row, column, dir) {
+    var sprite = new PIXI.Sprite(arrowTexture)
+
+    sprite.anchor.x = 0
+    sprite.anchor.y = 0.5
+
+    if (row >= 0) {
+      if (dir < 0) {
+        sprite.position.x = -2
+        sprite.rotation = deg180
+      } else {
+        sprite.position.x = 2
+      }
+
+      sprite.position.y = row * effectiveTileSize + effectiveTileSize / 2
+    } else {
+      if (dir < 0) {
+        sprite.position.y = -2
+        sprite.rotation = -deg45
+      } else {
+        sprite.position.y = 2
+        sprite.rotation = deg45
+      }
+
+      sprite.position.x = column * effectiveTileSize + effectiveTileSize / 2
+    }
+
+    sprite.scale.x = globalScale
+    sprite.scale.y = globalScale
+
+    sprite.interactive = true
+
+    return sprite
+  }
+
+  function generateRooms (house, numRooms) {
+    var rooms = []
     for (var i = 0; i < numRooms; i++) {
-      var room = null
+      var target = targets.splice(Math.floor(Math.random() * targets.length), 1)[0]
+      while (true) {
+        var x = Math.floor(Math.random() * house.width)
+        var y = Math.floor(Math.random() * house.height)
 
-      var target = targets[Math.floor(Math.random() * targets.length)]
-      availiableTargets.push(target)
-      while (!room) {
-        x = Math.floor(Math.random() * houseWidth)
-        y = Math.floor(Math.random() * houseHeight)
-
-        var location = house[x][y]
+        var location = house.locations[x][y]
         if (isLocationFree(location)) {
           location.info.target = target
-          stage.removeChild(location.sprite)
+          var container = location.sprite.parent
+          container.removeChild(location.sprite)
           location.sprite = locationImage(location.info.top, location.info.left, location.info.right, location.info.bottom, target)
           location.sprite.position.x = getLocationX(x)
           location.sprite.position.y = getLocationY(y)
-          stage.addChild(location.sprite)
-          room = true
+          container.addChild(location.sprite)
+          rooms.push(location)
+          break
         }
       }
     }
 
-    var grid = createGrid(houseWidth, houseHeight, effectiveTileSize, 0x666666)
-    grid.position.set(margin, margin + topBarHeight)
-    grid.alpha = 0.5
-    stage.addChild(grid)
+    return rooms
+  }
 
-    var moodIcon = getMoodTexture(currentMood)
-    moodSprite = new PIXI.Sprite(moodIcon)
-    moodSprite.anchor.set(0, 0.5)
-    moodSprite.position.set(5, topBarHeight / 2)
-    moodSprite.scale.set(2, 2)
-    stage.addChild(moodSprite)
-
-    for (i = 0; i < numPersons; i++) {
-      persons.push(createPerson())
+  function createTopBar (color, background, height, currentMood) {
+    var topBar = {
+      container: new PIXI.Container(),
+      currentMood: currentMood
     }
+
+    topBar.moodText = new PIXI.Text(currentMood, {
+      font: '16px Arial',
+      fill: color
+    })
+    topBar.moodText.x = 50
+    topBar.moodText.y = topBarHeight / 2
+    topBar.moodText.anchor.x = 0
+    topBar.moodText.anchor.y = 0.5
+
+    topBar.bar = new PIXI.Graphics()
+    topBar.bar.beginFill(background)
+    topBar.bar.drawRect(0, 0, renderWidth, height)
+
+    var moodIcon = getMoodTexture(topBar.currentMood)
+    topBar.moodSprite = new PIXI.Sprite(moodIcon)
+    topBar.moodSprite.anchor.set(0, 0.5)
+    topBar.moodSprite.position.set(5, height / 2)
+    topBar.moodSprite.scale.set(2, 2)
+
+    topBar.container.addChild(topBar.bar)
+    topBar.container.addChild(topBar.moodText)
+    topBar.container.addChild(topBar.moodSprite)
+
+    return topBar
+  }
+
+  function generateLevel (w, h, roomCount, numPersons) {
+    var level = {
+      pathsOutdated: true
+    }
+
+    level.container = new PIXI.Container()
+
+    var floorSprite = new PIXI.extras.TilingSprite(floorTexture, w * effectiveTileSize, h * effectiveTileSize)
+    floorSprite.tileScale.set(globalScale, globalScale)
+    floorSprite.position.set(margin, margin + topBarHeight)
+
+    level.container.addChild(floorSprite)
+
+    level.house = generateHouse(w, h, roomCount, 0.3)
+    level.house.level = level
+    level.container.addChild(level.house.container)
+
+    level.arrows = generateArrows(level.house)
+    level.arrows.container.position.set(margin, margin + topBarHeight)
+    level.container.addChild(level.arrows.container)
+
+    level.house.rooms = generateRooms(level.house, roomCount)
+
+    level.grid = createGrid(level.house.width, level.house.height, effectiveTileSize, gridColor)
+    level.grid.position.set(margin, margin + topBarHeight)
+    level.grid.alpha = gridAlpha
+    level.container.addChild(level.grid)
+
+    level.persons = []
+    level.personContainer = new PIXI.Container()
+    level.container.addChild(level.personContainer)
+    for (var i = 0; i < numPersons; i++) {
+      var person = createPerson(level.house)
+      level.persons.push(person)
+      level.personContainer.addChild(person.container)
+    }
+
+    level.topBar = createTopBar(topBarColor, topBarBackground, topBarHeight, initialMood)
+    level.container.addChild(level.topBar.container)
+
+    level.updateMood = function updateMood () {
+      for (var i = 0; i < level.persons.length; i++) {
+        level.topBar.currentMood -= level.persons[i].mood > 0 ? 0 : level.persons[i].mood < 0 ? 3 : 1
+      }
+
+      level.refreshMoodDisplay()
+    }
+
+    level.refreshMoodDisplay = function refreshMoodDisplay () {
+      level.topBar.moodText.text = '' + level.topBar.currentMood
+      level.topBar.moodSprite.texture = getMoodTexture(level.topBar.currentMood)
+    }
+
+    window.setInterval(level.updateMood, 5000)
+
+    level.update = function update () {
+      if (level.pathsOutdated) {
+        for (var i = 0; i < level.persons.length; i++) {
+          refreshPathForPerson(level.house, level.persons[i])
+        }
+        level.pathsOutdated = false
+      }
+
+      for (i = 0; i < level.persons.length; i++) {
+        updatePerson(level.house, level.persons[i])
+      }
+      level.arrows.refresh()
+    }
+
+    return level
   }
 
   function onAssetsLoaded () {
-    generateLevel()
-    refreshArrows()
+    window.level = generateLevel(houseWidth, houseHeight, numRooms, numPersons)
+
+    stage.addChild(window.level.container)
+
+    window.level.arrows.refresh()
 
     main()
   }
 
-  function main () {
+  function main (level) {
     window.requestAnimationFrame(main)
 
-    if (pathOutdated) {
-      for (var i = 0; i < numPersons; i++) {
-        refreshPathForPerson(persons[i])
-      }
-      pathOutdated = false
-    }
-
-    for (i = 0; i < numPersons; i++) {
-      updatePerson(persons[i])
-    }
-    refreshArrows()
+    window.level.update()
 
     renderer.render(stage)
   }
