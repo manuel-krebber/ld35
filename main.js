@@ -19,10 +19,22 @@
   var gridColor = 0x666666
   var gridAlpha = 0.6
 
+  var targets = ['kitchen', 'bath', 'toilet', 'gym', 'living', 'sleeping']
+
   PIXI.loader.add('corridor-straight', 'images/straight.png')
   PIXI.loader.add('arrow', 'images/arrow.png')
 
   PIXI.loader.once('complete', onAssetsLoaded)
+
+  var levels = [
+    staticLevelGenerator(-1, [
+      'XX5XXXXXXXXXXXXXXXXXX',
+      'XP.................5X',
+      'XXXXXXXXXXXXXXXXXXXXX'
+    ])
+  ]
+
+  console.log(levels[0])
 
   var bubbleTexture = PIXI.Texture.fromImage('images/bubble.png', true, PIXI.SCALE_MODES.NEAREST)
   var moodGoodTexture = PIXI.Texture.fromImage('images/mood-good.png', true, PIXI.SCALE_MODES.NEAREST)
@@ -67,8 +79,6 @@
 
   var desaturateFilter = new PIXI.filters.ColorMatrixFilter()
   desaturateFilter.desaturate()
-
-  var targets = ['kitchen', 'bath', 'toilet', 'gym', 'living', 'sleeping']
 
   var effectivePersonRadius = personRadius * globalScale
   var effectiveTileSize = tileSize * globalScale
@@ -204,7 +214,7 @@
     return fade(obj, 1, duration)
   }
 
-  function createPerson (house) {
+  function createPerson (house, x, y, target) {
     var personAnim = new PIXI.extras.MovieClip(personTextures)
 
     personAnim.scale.set(globalScale, globalScale)
@@ -212,19 +222,7 @@
     personAnim.anchor.set(0.5, 0.5)
     personAnim.interactive = true
 
-    var target = house.rooms[Math.floor(Math.random() * house.rooms.length)].info.target
-
-    var location = null
-    var x, y
-
-    while (!location) {
-      x = Math.floor(Math.random() * house.width)
-      y = Math.floor(Math.random() * house.height)
-
-      if (isLocationFree(house.locations[x][y])) {
-        location = house.locations[x][y]
-      }
-    }
+    var location = location = house.locations[x][y]
 
     var bubble = new PIXI.Sprite(bubbleTexture)
     bubble.anchor.set(0, 1.1)
@@ -755,6 +753,81 @@
     return rooms
   }
 
+  function staticLevelGenerator(timeLeft, lines) {
+    var infos = []
+
+    if (lines.length % 3 !== 0) throw new SyntaxError('Unexpected number of lines')
+    if (lines[0].length % 3 !== 0) throw new SyntaxError('Unexpected length of first line')
+    var width = lines[0].length / 3
+    var height = lines.length / 3
+    for (var i = 0; i < lines.length; i++) {
+      if (lines[i].length !== lines[0].length) throw new SyntaxError('Unexpected length of line #' + i)
+    }
+    for (var x = 0; x < width; x++) {
+      infos[x] = []
+      for (var y = 0; y < height; y++) {
+        infos[x][y] = {
+          top: lines[3 * y][3 * x + 1] === '.',
+          left: lines[3 * y + 1][3 * x] === '.',
+          right: lines[3 * y + 1][3 * x + 2] === '.',
+          bottom: lines[3 * y + 2][3 * x + 1] === '.'
+        }
+
+        var center = lines[3 * y + 1][3 * x + 1]
+        var target = parseInt(center, 10)
+        if (!isNaN(target)) {
+          infos[x][y].target = targets[target]
+        } else if (center === 'P') {
+          var person = parseInt(lines[3 * y][3 * x + 2], 10)
+
+          if (isNaN(person)) {
+            throw new SyntaxError('Missing number for person')
+          }
+
+          infos[x][y].person = targets[person]
+        }
+      }
+    }
+
+    return function generator (level) {
+      level.timeLeft = timeLeft
+
+      level.house = buildHouse(width, height)
+      level.persons = []
+      level.house.rooms = []
+
+      for (var x = 0; x < width; x++) {
+        for (var y = 0; y < height; y++) {
+          var sprite = locationImage(infos[x][y].top, infos[x][y].left, infos[x][y].right, infos[x][y].bottom, infos[x][y].target)
+
+          sprite.position.x = level.house.getLocationX(x)
+          sprite.position.y = level.house.getLocationY(y)
+
+          level.house.container.addChild(sprite)
+
+          level.house.locations[x][y] = {
+            info: infos[x][y],
+            sprite: sprite
+          }
+
+          if (infos[x][y].person) {
+            var person = createPerson(level.house, x, y, infos[x][y].person)
+            level.persons.push(person)
+
+            level.personContainer.addChild(person.container)
+            level.bubbleContainer.addChild(person.overlayContainer)
+            
+            infos[x][y].person = person
+          }
+          
+          if (infos[x][y].target) {
+            level.house.rooms.push(level.house.locations[x][y])
+          }
+        }
+      }
+    }
+  }
+
   function createTopBar (color, background, height) {
     var topBar = {
       container: new PIXI.Container()
@@ -810,6 +883,23 @@
     return topBar
   }
 
+  function generateRandomPerson (house) {
+    var target = house.rooms[Math.floor(Math.random() * house.rooms.length)].info.target
+
+    var x, y
+
+    while (true) {
+      x = Math.floor(Math.random() * house.width)
+      y = Math.floor(Math.random() * house.height)
+
+      if (isLocationFree(house.locations[x][y])) {
+        break
+      }
+    }
+
+    return createPerson(house, x, y, target)
+  }
+
   function randomLevelGenerator (w, h, roomCount, numPersons, timeLeft) {
     if (!timeLeft) timeLeft = -1
     return function generator (level) {
@@ -822,7 +912,8 @@
 
       level.persons = []
       for (var i = 0; i < numPersons; i++) {
-        var person = createPerson(level.house)
+        var person = generateRandomPerson(level.house)
+
         level.persons.push(person)
 
         level.personContainer.addChild(person.container)
@@ -911,6 +1002,10 @@
       }
     }
 
+    for (var x = 0; x < w; x++) {
+      house.locations.push([])
+    }
+
     return house
   }
 
@@ -979,7 +1074,9 @@
   }
 
   function onAssetsLoaded () {
-    var level = generateLevel(randomLevelGenerator(houseWidth, houseHeight, numRooms, numPersons))
+    var generator = randomLevelGenerator(houseWidth, houseHeight, numRooms, numPersons)
+    generator = levels[0]
+    var level = generateLevel(generator)
     stage.addChild(level.container)
 
     var blackBox = new PIXI.Graphics()
