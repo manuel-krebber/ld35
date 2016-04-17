@@ -12,12 +12,12 @@
   var renderWidth = 1200
   var renderHeight = 750
 
-  var houseWidth = 10
-  var houseHeight = 6
-  var numRooms = 6
-  var numPersons = 3
   var gridColor = 0x666666
   var gridAlpha = 0.6
+
+  var Game = window.game = {
+    currentLevel: 0
+  }
 
   var targets = ['kitchen', 'bath', 'toilet', 'gym', 'living', 'sleeping']
 
@@ -27,14 +27,26 @@
   PIXI.loader.once('complete', onAssetsLoaded)
 
   var levels = [
-    staticLevelGenerator(-1, [
-      'XX5XXXXXXXXXXXXXXXXXX',
-      'XP.................5X',
-      'XXXXXXXXXXXXXXXXXXXXX'
-    ])
+    {
+      name: 'Tutorial #1',
+      generator: staticLevelGenerator(-1, [
+        'XX5XXXXXXXXXXXXXXXXXX',
+        'XP.................5X',
+        'XXXXXXXXXXXXXXXXXXXXX'
+      ])
+    },
+    {
+      name: 'Tutorial #2',
+      generator: staticLevelGenerator(-1, [
+        'XXXXXXXXXXXXXXXXXXXXX',
+        'XXXXXX...XXXXXXXXXXXX',
+        'XXXXXXXXXXXXXXXXXXXXX',
+        'XX5XXXXXXXXXXXXXXXXXX',
+        'XP....XXX..........5X',
+        'XXXXXXXXXXXXXXXXXXXXX'
+      ])
+    }
   ]
-
-  console.log(levels[0])
 
   var bubbleTexture = PIXI.Texture.fromImage('images/bubble.png', true, PIXI.SCALE_MODES.NEAREST)
   var moodGoodTexture = PIXI.Texture.fromImage('images/mood-good.png', true, PIXI.SCALE_MODES.NEAREST)
@@ -88,7 +100,7 @@
       backgroundColor: 0x000000
     }
   )
-  document.body.appendChild(renderer.view)
+  document.getElementById('gameView').appendChild(renderer.view)
 
   var deg180 = Math.PI
   var deg45 = Math.PI / 2
@@ -798,7 +810,8 @@
 
       for (var x = 0; x < width; x++) {
         for (var y = 0; y < height; y++) {
-          var sprite = locationImage(infos[x][y].top, infos[x][y].left, infos[x][y].right, infos[x][y].bottom, infos[x][y].target)
+          var info = $.extend({}, infos[x][y])
+          var sprite = locationImage(info.top, info.left, info.right, info.bottom, info.target)
 
           sprite.position.x = level.house.getLocationX(x)
           sprite.position.y = level.house.getLocationY(y)
@@ -806,21 +819,21 @@
           level.house.container.addChild(sprite)
 
           level.house.locations[x][y] = {
-            info: infos[x][y],
+            info: info,
             sprite: sprite
           }
 
-          if (infos[x][y].person) {
-            var person = createPerson(level.house, x, y, infos[x][y].person)
+          if (info.person) {
+            var person = createPerson(level.house, x, y, info.person)
             level.persons.push(person)
 
             level.personContainer.addChild(person.container)
             level.bubbleContainer.addChild(person.overlayContainer)
-            
-            infos[x][y].person = person
+
+            info.person = person
           }
-          
-          if (infos[x][y].target) {
+
+          if (info.target) {
             level.house.rooms.push(level.house.locations[x][y])
           }
         }
@@ -834,7 +847,7 @@
     }
 
     topBar.moodText = new PIXI.Text('', {
-      font: '16px Arial',
+      font: '18px Arial',
       fill: color
     })
     topBar.moodText.x = 50
@@ -843,13 +856,22 @@
     topBar.moodText.anchor.y = 0.5
 
     topBar.timerText = new PIXI.Text('', {
-      font: '16px Arial',
+      font: '18px Arial',
       fill: color
     })
     topBar.timerText.x = renderWidth - 5
     topBar.timerText.y = topBarHeight / 2
     topBar.timerText.anchor.x = 1
     topBar.timerText.anchor.y = 0.5
+
+    topBar.nameText = new PIXI.Text('', {
+      font: '20px Arial bold',
+      fill: color
+    })
+    topBar.nameText.x = renderWidth / 2
+    topBar.nameText.y = topBarHeight / 2
+    topBar.nameText.anchor.x = 0.5
+    topBar.nameText.anchor.y = 0.5
 
     topBar.bar = new PIXI.Graphics()
     topBar.bar.beginFill(background)
@@ -865,10 +887,12 @@
     topBar.container.addChild(topBar.moodText)
     topBar.container.addChild(topBar.moodSprite)
     topBar.container.addChild(topBar.timerText)
+    topBar.container.addChild(topBar.nameText)
 
-    topBar.update = function updateTopBar (currentMood, timer) {
+    topBar.update = function updateTopBar (currentMood, timer, name) {
       topBar.moodText.text = '' + currentMood
       topBar.moodSprite.texture = getMoodTexture(currentMood)
+      topBar.nameText.text = name
 
       if (timer >= 0) {
         var minutes = Math.floor(timer / 60)
@@ -1073,35 +1097,73 @@
     return level
   }
 
+  function generateLevelSelect (container) {
+    var sel = $('<select>').appendTo(container)
+    $(levels).each(function (i, level) {
+      sel.append($('<option>').attr('value', i).text(level.name))
+    })
+
+    sel.change(function () {
+      changeLevel(this.value)
+    })
+
+    var btn = $('<button>').text('Reset Level').appendTo(container)
+
+    btn.click(function () {
+      changeLevel(Game.currentLevel)
+    })
+  }
+
+  function changeLevel (index) {
+    fadeIn(Game.blackBox).call(function () {
+      Game.currentLevel = index
+      Game.levelContainer.removeChildren()
+      Game.level = generateLevel(levels[index].generator)
+      Game.level.name = levels[index].name
+      Game.levelContainer.addChild(Game.level.container)
+
+      Game.blackBox.alpha = 1
+      fadeOut(Game.blackBox).call(Game.level.start)
+
+      Game.level.arrows.refresh()
+      updateTopBar()
+    })
+  }
+
   function onAssetsLoaded () {
-    var generator = randomLevelGenerator(houseWidth, houseHeight, numRooms, numPersons)
-    generator = levels[0]
-    var level = generateLevel(generator)
-    stage.addChild(level.container)
+    var generator = levels[Game.currentLevel].generator
+    Game.level = generateLevel(generator)
+    Game.level.name = levels[Game.currentLevel].name
 
-    var blackBox = new PIXI.Graphics()
-    blackBox.beginFill(0x000000)
-    blackBox.drawRect(0, 0, renderWidth, renderHeight)
-    stage.addChild(blackBox)
-    fadeOut(blackBox).call(level.start)
+    Game.levelContainer = new PIXI.Container()
+    stage.addChild(Game.levelContainer)
+    Game.levelContainer.addChild(Game.level.container)
 
-    var topBar = createTopBar(topBarColor, topBarBackground, topBarHeight)
-    stage.addChild(topBar.container)
+    Game.blackBox = new PIXI.Graphics()
+    Game.blackBox.beginFill(0x000000)
+    Game.blackBox.drawRect(0, 0, renderWidth, renderHeight)
+    stage.addChild(Game.blackBox)
+    fadeOut(Game.blackBox).call(Game.level.start)
 
-    level.arrows.refresh()
+    Game.topBar = createTopBar(topBarColor, topBarBackground, topBarHeight)
+    stage.addChild(Game.topBar.container)
 
-    window.level = level
-    window.topBar = topBar
+    Game.level.arrows.refresh()
+
+    generateLevelSelect(document.getElementById('levelSelect'))
 
     main()
+  }
+
+  function updateTopBar () {
+    Game.topBar.update(Game.level.mood, Game.level.timeLeft, Game.level.name)
   }
 
   function main (level) {
     window.requestAnimationFrame(main)
 
-    window.level.update()
-
-    window.topBar.update(window.level.mood, window.level.timeLeft)
+    Game.level.update()
+    updateTopBar()
 
     renderer.render(stage)
   }
