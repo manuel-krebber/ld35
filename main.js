@@ -1,5 +1,4 @@
 (function () {
-  var margin = 40
   var globalScale = 3
   var tileSize = 32
   var topBarHeight = 50
@@ -9,6 +8,9 @@
   var iconFadeTime = 1500
   var idleTime = 2000
   var initialMood = 100
+
+  var renderWidth = 1200
+  var renderHeight = 750
 
   var houseWidth = 10
   var houseHeight = 6
@@ -70,9 +72,6 @@
 
   var effectivePersonRadius = personRadius * globalScale
   var effectiveTileSize = tileSize * globalScale
-
-  var renderWidth = effectiveTileSize * houseWidth + 2 * margin
-  var renderHeight = effectiveTileSize * houseHeight + 2 * margin + topBarHeight
 
   var renderer = PIXI.autoDetectRenderer(renderWidth, renderHeight,
     {
@@ -189,6 +188,22 @@
     return false
   }
 
+  function fade (obj, alpha, duration) {
+    if (typeof duration !== 'number') {
+      duration = 500
+    }
+    return createjs.Tween.get(obj)
+      .to({ alpha: alpha }, duration) // , createjs.Ease.getPowInOut(4)
+  }
+
+  function fadeOut (obj, duration) {
+    return fade(obj, 0, duration)
+  }
+
+  function fadeIn (obj, duration) {
+    return fade(obj, 1, duration)
+  }
+
   function createPerson (house) {
     var personAnim = new PIXI.extras.MovieClip(personTextures)
 
@@ -225,11 +240,16 @@
     moodIcon.alpha = 0
 
     var container = new PIXI.Container()
-    container.position.set(getLocationX(x), getLocationY(y))
+    var overlayContainer = new PIXI.Container()
+
+    container.position.set(house.getLocationX(x), house.getLocationY(y))
+    overlayContainer.position = container.position
+
     container.addChild(personAnim)
-    container.addChild(bubble)
-    container.addChild(targetIcon)
-    container.addChild(moodIcon)
+
+    overlayContainer.addChild(bubble)
+    overlayContainer.addChild(targetIcon)
+    overlayContainer.addChild(moodIcon)
 
     house.rowBlocked[y]++
     house.colBlocked[x]++
@@ -237,6 +257,7 @@
     var person = {
       animation: personAnim,
       container: container,
+      overlayContainer: overlayContainer,
       target: target,
       location: location,
       targetIcon: targetIcon,
@@ -251,8 +272,7 @@
 
     personAnim.on('mouseover', function () {
       moodIcon.alpha = 0
-      createjs.Tween.get(person.moodIcon)
-        .to({ alpha: 1 }, 500, createjs.Ease.getPowInOut(4))
+      fadeIn(person.moodIcon)
       if (person.iconTimeout) {
         window.clearTimeout(person.iconTimeout)
         person.iconTimeout = null
@@ -260,8 +280,7 @@
     })
     personAnim.on('mouseout', function () {
       person.iconTimeout = window.setTimeout(function () {
-        createjs.Tween.get(person.moodIcon)
-          .to({ alpha: 0 }, 500, createjs.Ease.getPowInOut(4))
+        fadeOut(person.moodIcon)
         person.iconTimeout = null
       }, iconFadeTime)
     })
@@ -269,14 +288,6 @@
     location.info.person = person
 
     return person
-  }
-
-  function getLocationX (col) {
-    return margin + col * effectiveTileSize + effectiveTileSize / 2
-  }
-
-  function getLocationY (row) {
-    return topBarHeight + margin + row * effectiveTileSize + effectiveTileSize / 2
   }
 
   function rotateToAngle (current, target, step) {
@@ -355,8 +366,8 @@
 
   function checkCollisionForPerson (house, person) {
     if (!house.canMove(person.x, person.y, person.dx, person.dy)) {
-      if (person.container.position.x !== getLocationX(person.x) ||
-          person.container.position.y !== getLocationY(person.y)) {
+      if (person.container.position.x !== house.getLocationX(person.x) ||
+          person.container.position.y !== house.getLocationY(person.y)) {
         person.x += person.dx
         person.dx = -person.dx
         person.y += person.dy
@@ -390,11 +401,9 @@
       person.moodIcon.texture = getMoodTexture(newMood)
 
       if (!person.iconTimeout) {
-        createjs.Tween.get(person.moodIcon)
-          .to({ alpha: 1 }, 500, createjs.Ease.getPowInOut(4))
+        fadeIn(person.moodIcon)
         person.iconTimeout = window.setTimeout(function () {
-          createjs.Tween.get(person.moodIcon)
-            .to({ alpha: 0 }, 500, createjs.Ease.getPowInOut(4))
+          fadeOut(person.moodIcon)
           person.iconTimeout = null
         }, iconFadeTime + 500)
       }
@@ -430,10 +439,8 @@
 
     if (house.locations[person.x][person.y].info.target === person.target) {
       person.target = null
-      createjs.Tween.get(person.bubble)
-        .to({ alpha: 0 }, 500, createjs.Ease.getPowInOut(4))
-      createjs.Tween.get(person.targetIcon)
-        .to({ alpha: 0 }, 500, createjs.Ease.getPowInOut(4))
+      fadeOut(person.bubble)
+      fadeOut(person.targetIcon)
     }
 
     person.moodIcon.texture = getMoodTexture(person.mood)
@@ -447,7 +454,7 @@
       } else {
         person.container.x += sdx
         person.animation.play()
-        var progress = person.container.x - getLocationX(person.x) - sdx * effectiveTileSize / 2
+        var progress = person.container.x - house.getLocationX(person.x) - sdx * effectiveTileSize / 2
 
         if (progress + sdx * effectivePersonRadius === 0) {
           house.colBlocked[person.x + sdx]++
@@ -461,7 +468,7 @@
           person.location = house.locations[person.x + sdx][person.y]
         }
 
-        if (Math.abs(person.container.x - getLocationX(person.x)) === effectiveTileSize) {
+        if (Math.abs(person.container.x - house.getLocationX(person.x)) === effectiveTileSize) {
           person.dx += -sdx
           person.x += sdx
         }
@@ -475,7 +482,7 @@
       } else {
         person.container.y += sdy
         person.animation.play()
-        progress = person.container.y - getLocationY(person.y) - sdy * effectiveTileSize / 2
+        progress = person.container.y - house.getLocationY(person.y) - sdy * effectiveTileSize / 2
 
         if (progress + sdy * effectivePersonRadius === 0) {
           house.rowBlocked[person.y + sdy]++
@@ -489,7 +496,7 @@
           person.location = house.locations[person.x][person.y + sdy]
         }
 
-        if (Math.abs(person.container.y - getLocationY(person.y)) === effectiveTileSize) {
+        if (Math.abs(person.container.y - house.getLocationY(person.y)) === effectiveTileSize) {
           person.dy += -sdy
           person.y += sdy
         }
@@ -588,93 +595,20 @@
     return pred
   }
 
-  function generateHouse (w, h, roomCount, fillFactor) {
-    var house = {
-      width: w,
-      height: h,
-      fillFactor: fillFactor,
-      roomCount: roomCount,
-      locations: [],
-      container: new PIXI.Container(),
-      rowBlocked: Array(h).fill(0),
-      colBlocked: Array(w).fill(0),
-
-      shiftLeft: function shiftLeft (y) {
-        var first = house.locations[0][y]
-
-        for (var x = 1; x < house.width; x++) {
-          house.locations[x - 1][y] = house.locations[x][y]
-          house.locations[x - 1][y].sprite.position.x = getLocationX(x - 1)
-        }
-
-        house.locations[house.width - 1][y] = first
-        house.locations[house.width - 1][y].sprite.position.x = getLocationX(house.width - 1)
-      },
-
-      shiftRight: function shiftRight (y) {
-        var last = house.locations[house.width - 1][y]
-
-        for (var x = house.width - 1; x > 0; x--) {
-          house.locations[x][y] = house.locations[x - 1][y]
-          house.locations[x][y].sprite.position.x = getLocationX(x)
-        }
-
-        house.locations[0][y] = last
-        house.locations[0][y].sprite.position.x = getLocationX(0)
-      },
-
-      shiftUp: function shiftUp (x) {
-        var first = house.locations[x][0]
-
-        for (var y = 1; y < house.height; y++) {
-          house.locations[x][y - 1] = house.locations[x][y]
-          house.locations[x][y - 1].sprite.position.y = getLocationY(y - 1)
-        }
-
-        house.locations[x][house.height - 1] = first
-        house.locations[x][house.height - 1].sprite.position.y = getLocationY(house.height - 1)
-      },
-
-      shiftDown: function shiftDown (x) {
-        var last = house.locations[x][house.height - 1]
-
-        for (var y = house.height - 1; y > 0; y--) {
-          house.locations[x][y] = house.locations[x][y - 1]
-          house.locations[x][y].sprite.position.y = getLocationY(y)
-        }
-
-        house.locations[x][0] = last
-        house.locations[x][0].sprite.position.y = getLocationY(0)
-      },
-
-      canMove: function canMove (x, y, dx, dy) {
-        dx = Math.sign(dx)
-        dy = Math.sign(dy)
-        if (x + dx < 0 || x + dx >= house.width) return false
-        if (y + dy < 0 || y + dy >= house.height) return false
-        var self = house.locations[x][y].info
-        var other = house.locations[x + dx][y + dy].info
-
-        return (dx > 0 && self.right && other.left) ||
-          (dx < 0 && self.left && other.right) ||
-          (dy > 0 && self.bottom && other.top) ||
-          (dy < 0 && self.top && other.bottom)
-      }
-    }
-
-    for (var x = 0; x < w; x++) {
+  function fillRandomHouse (house, roomCount, fillFactor) {
+    for (var x = 0; x < house.width; x++) {
       house.locations[x] = []
-      for (var y = 0; y < h; y++) {
+      for (var y = 0; y < house.height; y++) {
         var info = {
           top: y > 0 ? house.locations[x][y - 1].info.bottom : false,
           left: x > 0 ? house.locations[x - 1][y].info.right : false,
-          right: x < w - 1 ? Math.random() < fillFactor : false,
-          bottom: y < h - 1 ? Math.random() < fillFactor : false
+          right: x < house.width - 1 ? Math.random() < fillFactor : false,
+          bottom: y < house.height - 1 ? Math.random() < fillFactor : false
         }
         var sprite = locationImage(info.top, info.left, info.right, info.bottom)
 
-        sprite.position.x = getLocationX(x)
-        sprite.position.y = getLocationY(y)
+        sprite.position.x = house.getLocationX(x)
+        sprite.position.y = house.getLocationY(y)
 
         house.container.addChild(sprite)
 
@@ -684,8 +618,6 @@
         }
       }
     }
-
-    return house
   }
 
   function generateArrows (house) {
@@ -811,8 +743,8 @@
           var container = location.sprite.parent
           container.removeChild(location.sprite)
           location.sprite = locationImage(location.info.top, location.info.left, location.info.right, location.info.bottom, target)
-          location.sprite.position.x = getLocationX(x)
-          location.sprite.position.y = getLocationY(y)
+          location.sprite.position.x = house.getLocationX(x)
+          location.sprite.position.y = house.getLocationY(y)
           container.addChild(location.sprite)
           rooms.push(location)
           break
@@ -823,13 +755,12 @@
     return rooms
   }
 
-  function createTopBar (color, background, height, currentMood) {
+  function createTopBar (color, background, height) {
     var topBar = {
-      container: new PIXI.Container(),
-      currentMood: currentMood
+      container: new PIXI.Container()
     }
 
-    topBar.moodText = new PIXI.Text(currentMood, {
+    topBar.moodText = new PIXI.Text('', {
       font: '16px Arial',
       fill: color
     })
@@ -837,6 +768,15 @@
     topBar.moodText.y = topBarHeight / 2
     topBar.moodText.anchor.x = 0
     topBar.moodText.anchor.y = 0.5
+
+    topBar.timerText = new PIXI.Text('', {
+      font: '16px Arial',
+      fill: color
+    })
+    topBar.timerText.x = renderWidth - 5
+    topBar.timerText.y = topBarHeight / 2
+    topBar.timerText.anchor.x = 1
+    topBar.timerText.anchor.y = 0.5
 
     topBar.bar = new PIXI.Graphics()
     topBar.bar.beginFill(background)
@@ -851,64 +791,160 @@
     topBar.container.addChild(topBar.bar)
     topBar.container.addChild(topBar.moodText)
     topBar.container.addChild(topBar.moodSprite)
+    topBar.container.addChild(topBar.timerText)
+
+    topBar.update = function updateTopBar (currentMood, timer) {
+      topBar.moodText.text = '' + currentMood
+      topBar.moodSprite.texture = getMoodTexture(currentMood)
+
+      if (timer >= 0) {
+        var minutes = Math.floor(timer / 60)
+        var seconds = timer % 60
+
+        topBar.timerText.text = minutes + ':' + (seconds > 9 ? seconds : '0' + seconds)
+      } else {
+        topBar.timerText.text = ''
+      }
+    }
 
     return topBar
   }
 
-  function generateLevel (w, h, roomCount, numPersons) {
+  function randomLevelGenerator (w, h, roomCount, numPersons, timeLeft) {
+    if (!timeLeft) timeLeft = -1
+    return function generator (level) {
+      level.timeLeft = timeLeft
+
+      level.house = buildHouse(w, h)
+      fillRandomHouse(level.house, roomCount, 0.3)
+
+      level.house.rooms = generateRooms(level.house, roomCount)
+
+      level.persons = []
+      for (var i = 0; i < numPersons; i++) {
+        var person = createPerson(level.house)
+        level.persons.push(person)
+
+        level.personContainer.addChild(person.container)
+        level.bubbleContainer.addChild(person.overlayContainer)
+      }
+    }
+  }
+
+  function buildHouse (w, h) {
+    var house = {
+      width: w,
+      height: h,
+      locations: [],
+      container: new PIXI.Container(),
+      rowBlocked: Array(h).fill(0),
+      colBlocked: Array(w).fill(0),
+
+      shiftLeft: function shiftLeft (y) {
+        var first = house.locations[0][y]
+
+        for (var x = 1; x < house.width; x++) {
+          house.locations[x - 1][y] = house.locations[x][y]
+          house.locations[x - 1][y].sprite.position.x = house.getLocationX(x - 1)
+        }
+
+        house.locations[house.width - 1][y] = first
+        house.locations[house.width - 1][y].sprite.position.x = house.getLocationX(house.width - 1)
+      },
+
+      shiftRight: function shiftRight (y) {
+        var last = house.locations[house.width - 1][y]
+
+        for (var x = house.width - 1; x > 0; x--) {
+          house.locations[x][y] = house.locations[x - 1][y]
+          house.locations[x][y].sprite.position.x = house.getLocationX(x)
+        }
+
+        house.locations[0][y] = last
+        house.locations[0][y].sprite.position.x = house.getLocationX(0)
+      },
+
+      shiftUp: function shiftUp (x) {
+        var first = house.locations[x][0]
+
+        for (var y = 1; y < house.height; y++) {
+          house.locations[x][y - 1] = house.locations[x][y]
+          house.locations[x][y - 1].sprite.position.y = house.getLocationY(y - 1)
+        }
+
+        house.locations[x][house.height - 1] = first
+        house.locations[x][house.height - 1].sprite.position.y = house.getLocationY(house.height - 1)
+      },
+
+      shiftDown: function shiftDown (x) {
+        var last = house.locations[x][house.height - 1]
+
+        for (var y = house.height - 1; y > 0; y--) {
+          house.locations[x][y] = house.locations[x][y - 1]
+          house.locations[x][y].sprite.position.y = house.getLocationY(y)
+        }
+
+        house.locations[x][0] = last
+        house.locations[x][0].sprite.position.y = house.getLocationY(0)
+      },
+
+      canMove: function canMove (x, y, dx, dy) {
+        dx = Math.sign(dx)
+        dy = Math.sign(dy)
+        if (x + dx < 0 || x + dx >= house.width) return false
+        if (y + dy < 0 || y + dy >= house.height) return false
+        var self = house.locations[x][y].info
+        var other = house.locations[x + dx][y + dy].info
+
+        return (dx > 0 && self.right && other.left) ||
+          (dx < 0 && self.left && other.right) ||
+          (dy > 0 && self.bottom && other.top) ||
+          (dy < 0 && self.top && other.bottom)
+      },
+
+      getLocationX: function getLocationX (col) {
+        return col * effectiveTileSize + effectiveTileSize / 2
+      },
+
+      getLocationY: function getLocationY (row) {
+        return row * effectiveTileSize + effectiveTileSize / 2
+      }
+    }
+
+    return house
+  }
+
+  function generateLevel (levelGenerator) {
     var level = {
       pathsOutdated: true
     }
 
     level.container = new PIXI.Container()
+    level.personContainer = new PIXI.Container()
+    level.bubbleContainer = new PIXI.Container()
 
-    var floorSprite = new PIXI.extras.TilingSprite(floorTexture, w * effectiveTileSize, h * effectiveTileSize)
-    floorSprite.tileScale.set(globalScale, globalScale)
-    floorSprite.position.set(margin, margin + topBarHeight)
-
-    level.container.addChild(floorSprite)
-
-    level.house = generateHouse(w, h, roomCount, 0.3)
+    levelGenerator(level)
     level.house.level = level
-    level.container.addChild(level.house.container)
+
+    var floorSprite = new PIXI.extras.TilingSprite(floorTexture, level.house.width * effectiveTileSize, level.house.height * effectiveTileSize)
+    floorSprite.tileScale.set(globalScale, globalScale)
 
     level.arrows = generateArrows(level.house)
-    level.arrows.container.position.set(margin, margin + topBarHeight)
-    level.container.addChild(level.arrows.container)
-
-    level.house.rooms = generateRooms(level.house, roomCount)
 
     level.grid = createGrid(level.house.width, level.house.height, effectiveTileSize, gridColor)
-    level.grid.position.set(margin, margin + topBarHeight)
     level.grid.alpha = gridAlpha
-    level.container.addChild(level.grid)
 
-    level.persons = []
-    level.personContainer = new PIXI.Container()
-    level.container.addChild(level.personContainer)
-    for (var i = 0; i < numPersons; i++) {
-      var person = createPerson(level.house)
-      level.persons.push(person)
-      level.personContainer.addChild(person.container)
-    }
-
-    level.topBar = createTopBar(topBarColor, topBarBackground, topBarHeight, initialMood)
-    level.container.addChild(level.topBar.container)
+    level.mood = initialMood
 
     level.updateMood = function updateMood () {
       for (var i = 0; i < level.persons.length; i++) {
-        level.topBar.currentMood -= level.persons[i].mood > 0 ? 0 : level.persons[i].mood < 0 ? 3 : 1
+        level.mood -= level.persons[i].mood > 0 ? 0 : level.persons[i].mood < 0 ? 3 : 1
       }
-
-      level.refreshMoodDisplay()
     }
 
-    level.refreshMoodDisplay = function refreshMoodDisplay () {
-      level.topBar.moodText.text = '' + level.topBar.currentMood
-      level.topBar.moodSprite.texture = getMoodTexture(level.topBar.currentMood)
+    level.updateTimer = function updateMood () {
+      level.timeLeft -= 1
     }
-
-    window.setInterval(level.updateMood, 5000)
 
     level.update = function update () {
       if (level.pathsOutdated) {
@@ -924,15 +960,41 @@
       level.arrows.refresh()
     }
 
+    level.start = function startLevel () {
+      level.moodTimer = window.setInterval(level.updateMood, 5000)
+      level.timeTimer = window.setInterval(level.updateTimer, 1000)
+    }
+
+    level.container.addChild(floorSprite)
+    level.container.addChild(level.house.container)
+    level.container.addChild(level.grid)
+    level.container.addChild(level.personContainer)
+    level.container.addChild(level.arrows.container)
+    level.container.addChild(level.bubbleContainer)
+
+    level.container.pivot.set(level.house.width * effectiveTileSize / 2, level.house.height * effectiveTileSize / 2)
+    level.container.position.set(renderWidth / 2, topBarHeight + (renderHeight - topBarHeight) / 2)
+
     return level
   }
 
   function onAssetsLoaded () {
-    window.level = generateLevel(houseWidth, houseHeight, numRooms, numPersons)
+    var level = generateLevel(randomLevelGenerator(houseWidth, houseHeight, numRooms, numPersons))
+    stage.addChild(level.container)
 
-    stage.addChild(window.level.container)
+    var blackBox = new PIXI.Graphics()
+    blackBox.beginFill(0x000000)
+    blackBox.drawRect(0, 0, renderWidth, renderHeight)
+    stage.addChild(blackBox)
+    fadeOut(blackBox).call(level.start)
 
-    window.level.arrows.refresh()
+    var topBar = createTopBar(topBarColor, topBarBackground, topBarHeight)
+    stage.addChild(topBar.container)
+
+    level.arrows.refresh()
+
+    window.level = level
+    window.topBar = topBar
 
     main()
   }
@@ -941,6 +1003,8 @@
     window.requestAnimationFrame(main)
 
     window.level.update()
+
+    window.topBar.update(window.level.mood, window.level.timeLeft)
 
     renderer.render(stage)
   }
