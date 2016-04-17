@@ -7,7 +7,6 @@
   var topBarColor = 0xFFFFFF
   var iconFadeTime = 1500
   var idleTime = 2000
-  var initialMood = 100
 
   var renderWidth = 1200
   var renderHeight = 750
@@ -29,15 +28,16 @@
   var levels = [
     {
       name: 'Tutorial #1',
-      generator: staticLevelGenerator(-1, 3, [
-        'XX5XXXXXXXXXXXXXXXXXX',
-        'XP.................5X',
-        'XXXXXXXXXXXXXXXXXXXXX'
-      ])
+      generator: staticLevelGenerator(-1, 3, 10, [
+        'XX5XXXXXX',
+        'XP.....5X',
+        'XXXXXXXXX'
+      ]),
+      nextLevel: 1
     },
     {
       name: 'Tutorial #2',
-      generator: staticLevelGenerator(-1, 3, [
+      generator: staticLevelGenerator(-1, 3, 10, [
         'XXXXXXXXXXXXXXXXXXXXX',
         'XXXXXX...XXXXXXXXXXXX',
         'XXXXXXXXXXXXXXXXXXXXX',
@@ -48,15 +48,15 @@
     },
     {
       name: 'Small Random',
-      generator: randomLevelGenerator(6, 4, 3, 2, 1, true, 60)
+      generator: randomLevelGenerator(6, 4, 3, 2, 1, 100, true, 60)
     },
     {
       name: 'Medium Random',
-      generator: randomLevelGenerator(10, 6, 3, 4, 3, true, 160)
+      generator: randomLevelGenerator(10, 6, 3, 4, 3, 150, true, 160)
     },
     {
       name: 'Big Random',
-      generator: randomLevelGenerator(18, 10, 2, 6, 6, true, 300)
+      generator: randomLevelGenerator(18, 10, 2, 6, 6, 250, true, 300)
     }
   ]
 
@@ -64,6 +64,11 @@
   var moodGoodTexture = PIXI.Texture.fromImage('images/mood-good.png', true, PIXI.SCALE_MODES.NEAREST)
   var moodBadTexture = PIXI.Texture.fromImage('images/mood-bad.png', true, PIXI.SCALE_MODES.NEAREST)
   var moodNeutralTexture = PIXI.Texture.fromImage('images/mood-neutral.png', true, PIXI.SCALE_MODES.NEAREST)
+
+  var btnRestartTexture = PIXI.Texture.fromImage('images/button-restart.png', true, PIXI.SCALE_MODES.NEAREST)
+  var btnNextLevelTexture = PIXI.Texture.fromImage('images/button-next-level.png', true, PIXI.SCALE_MODES.NEAREST)
+
+  var timeIconTexture = PIXI.Texture.fromImage('images/icon-time.png', true, PIXI.SCALE_MODES.NEAREST)
 
   var personTextures = [
     PIXI.Texture.fromImage('images/person.png', true, PIXI.SCALE_MODES.NEAREST),
@@ -115,8 +120,9 @@
   var deg45 = Math.PI / 2
   var stage = new PIXI.Container()
 
-  function getMoodTexture (mood) {
-    return mood >= 50 ? moodGoodTexture : mood <= -50 ? moodBadTexture : moodNeutralTexture
+  function getMoodTexture (mood, max) {
+    var offset = mood * 3.0 / max
+    return offset >= 2 ? moodGoodTexture : offset <= 1 ? moodBadTexture : moodNeutralTexture
   }
 
   function createGrid (w, h, size, color) {
@@ -223,7 +229,7 @@
       duration = 500
     }
     return createjs.Tween.get(obj)
-      .to({ alpha: alpha }, duration) // , createjs.Ease.getPowInOut(4)
+      .to({ alpha: alpha, visible: alpha !== 0 }, duration)
   }
 
   function fadeOut (obj, duration) {
@@ -231,6 +237,7 @@
   }
 
   function fadeIn (obj, duration) {
+    obj.visible = true
     return fade(obj, 1, duration)
   }
 
@@ -252,7 +259,7 @@
     targetIcon.anchor.set(-0.3, 1.6)
     targetIcon.scale.set(house.scale, house.scale)
 
-    var moodIcon = new PIXI.Sprite(getMoodTexture(100))
+    var moodIcon = new PIXI.Sprite(moodGoodTexture)
     moodIcon.anchor.set(1, 1.6)
     moodIcon.scale.set(2, 2)
     moodIcon.alpha = 0
@@ -284,8 +291,7 @@
       x: x,
       y: y,
       dx: 0,
-      dy: 0,
-      happiness: 100
+      dy: 0
     }
 
     personAnim.on('mouseover', function () {
@@ -416,7 +422,7 @@
 
   function changePersonMood (person, newMood) {
     if (person.mood !== newMood) {
-      person.moodIcon.texture = getMoodTexture(newMood)
+      person.moodIcon.texture = getMoodTexture(newMood, 2)
 
       if (!person.iconTimeout) {
         fadeIn(person.moodIcon)
@@ -429,6 +435,119 @@
     person.mood = newMood
   }
 
+  function createLevelEndScreen () {
+    var endScreen = { shown: false }
+    var container = endScreen.container = new PIXI.Container()
+
+    var title = endScreen.title = new PIXI.Text('Title', {
+      font: 'bold 100px monospace',
+      fill: 0xFFFFFF
+    })
+    title.anchor.set(0.5, 2)
+    title.position.set(renderWidth / 2, renderHeight / 2)
+    container.addChild(title)
+
+    var restartButton = endScreen.restartButton = new PIXI.Sprite(btnRestartTexture)
+    restartButton.anchor.set(1.3, -2)
+    restartButton.position.set(renderWidth / 2, renderHeight / 2)
+    restartButton.interactive = true
+    container.addChild(restartButton)
+
+    var nextButton = endScreen.nextButton = new PIXI.Sprite(btnNextLevelTexture)
+    nextButton.anchor.set(-0.3, -2)
+    nextButton.position.set(renderWidth / 2, renderHeight / 2)
+    nextButton.interactive = true
+    container.addChild(nextButton)
+
+    var moodIcon = endScreen.moodIcon = new PIXI.Sprite(moodGoodTexture)
+    moodIcon.anchor.set(1.1, 0.5)
+    moodIcon.position.set(renderWidth / 3, renderHeight / 2)
+    moodIcon.scale.set(4)
+    container.addChild(moodIcon)
+
+    var moodText = endScreen.moodText = new PIXI.Text('100', {
+      font: '40px monospace',
+      fill: 0xFFFFFF
+    })
+    moodText.anchor.set(-0.1, 0.5)
+    moodText.position.set(renderWidth / 3, renderHeight / 2)
+    container.addChild(moodText)
+
+    var timeIcon = endScreen.timeIcon = new PIXI.Sprite(timeIconTexture)
+    timeIcon.anchor.set(1.1, 0.5)
+    timeIcon.position.set(2 * renderWidth / 3, renderHeight / 2)
+    timeIcon.scale.set(4)
+    container.addChild(timeIcon)
+
+    var timeText = endScreen.timeText = new PIXI.Text('3:52', {
+      font: '40px monospace',
+      fill: 0xFFFFFF
+    })
+    timeText.anchor.set(-0.1, 0.5)
+    timeText.position.set(2 * renderWidth / 3, renderHeight / 2)
+    container.addChild(timeText)
+
+    endScreen.update = function (mood, moodMax, time, failed) {
+      moodText.text = '' + mood
+      moodIcon.texture = getMoodTexture(mood, moodMax)
+
+      if (time >= 0) {
+        timeText.text = formatTime(time)
+        timeText.visible = timeIcon.visible = true
+        moodText.position.set(renderWidth / 3, renderHeight / 2)
+        moodIcon.position.set(renderWidth / 3, renderHeight / 2)
+      } else {
+        timeText.visible = timeIcon.visible = false
+        moodText.position.set(renderWidth / 2, renderHeight / 2)
+        moodIcon.position.set(renderWidth / 2, renderHeight / 2)
+      }
+
+      if (failed) {
+        nextButton.visible = false
+        restartButton.anchor.x = 0.5
+        title.style.fill = '#AA0000'
+        title.text = 'RUINED'
+      } else {
+        nextButton.visible = true
+        restartButton.anchor.x = 1.3
+        title.text = 'SAVED'
+        title.style.fill = '#00AA00'
+      }
+
+      if (levels[Game.currentLevel].nextLevel === undefined) {
+        nextButton.visible = false
+        restartButton.anchor.x = 0.5
+      }
+    }
+
+    endScreen.show = function () {
+      endScreen.shown = true
+      return fadeIn(Game.blackBox).call(function () {
+        Game.level = null
+        fadeIn(container).call(function () {
+          Game.levelContainer.removeChildren()
+        })
+      })
+    }
+
+    endScreen.hide = function () {
+      endScreen.shown = false
+      return fadeOut(container).call(function () {
+        fadeIn(Game.blackBox)
+      })
+    }
+
+    restartButton.on('click', function () {
+      changeLevel(Game.currentLevel)
+    })
+
+    nextButton.on('click', function () {
+      changeLevel(levels[Game.currentLevel].nextLevel)
+    })
+
+    return endScreen
+  }
+
   function updatePerson (house, person) {
     if (person.dx === 0 && person.dy === 0) {
       if (person.path) {
@@ -437,7 +556,7 @@
         person.dx = direction.dx
         person.dy = direction.dy
 
-        changePersonMood(person, 100)
+        changePersonMood(person, 2)
       } else if (!person.idleTimeout) {
         person.idleTimeout = window.setTimeout(function () {
           person.idleTimeout = null
@@ -447,9 +566,9 @@
             var i = Math.floor(Math.random() * dirs.length)
             person.dx = dirs[i].dx
             person.dy = dirs[i].dy
-            changePersonMood(person, person.target ? 0 : 100)
+            changePersonMood(person, person.target ? 1 : 2)
           } else {
-            changePersonMood(person, -100)
+            changePersonMood(person, 0)
           }
         }, idleTime)
       }
@@ -459,9 +578,15 @@
       person.target = null
       fadeOut(person.bubble)
       fadeOut(person.targetIcon)
+
+      house.level.happyPersons++
+
+      if (house.level.happyPersons === house.level.persons.length) {
+        house.level.end(true)
+      }
     }
 
-    person.moodIcon.texture = getMoodTexture(person.mood)
+    person.moodIcon.texture = getMoodTexture(person.mood, 2)
 
     if (person.dx !== 0) {
       var targetAngle = person.dx > 0 ? -deg45 : deg45
@@ -758,7 +883,7 @@
           thisTargets = targets.slice(0)
         }
       }
-      
+
       while (true) {
         var x = Math.floor(Math.random() * house.width)
         var y = Math.floor(Math.random() * house.height)
@@ -781,7 +906,7 @@
     return rooms
   }
 
-  function staticLevelGenerator (timeLeft, scale, lines) {
+  function staticLevelGenerator (timeLeft, scale, mood, lines) {
     var infos = []
 
     if (lines.length % 3 !== 0) throw new SyntaxError('Unexpected number of lines')
@@ -820,6 +945,7 @@
     return function generator (level) {
       level.timeLeft = timeLeft
 
+      level.moodMax = mood
       level.house = buildHouse(width, height, scale)
       level.persons = []
       level.house.rooms = []
@@ -863,7 +989,7 @@
     }
 
     topBar.moodText = new PIXI.Text('', {
-      font: '18px Arial',
+      font: '20px Arial',
       fill: color
     })
     topBar.moodText.x = 50
@@ -872,16 +998,16 @@
     topBar.moodText.anchor.y = 0.5
 
     topBar.timerText = new PIXI.Text('', {
-      font: '18px Arial',
+      font: '20px Arial',
       fill: color
     })
-    topBar.timerText.x = renderWidth - 5
+    topBar.timerText.x = renderWidth - 50
     topBar.timerText.y = topBarHeight / 2
     topBar.timerText.anchor.x = 1
     topBar.timerText.anchor.y = 0.5
 
     topBar.nameText = new PIXI.Text('', {
-      font: '20px Arial bold',
+      font: 'bold 24px Arial',
       fill: color
     })
     topBar.nameText.x = renderWidth / 2
@@ -893,34 +1019,43 @@
     topBar.bar.beginFill(background)
     topBar.bar.drawRect(0, 0, renderWidth, height)
 
-    var moodIcon = getMoodTexture(topBar.currentMood)
-    topBar.moodSprite = new PIXI.Sprite(moodIcon)
+    topBar.moodSprite = new PIXI.Sprite(moodGoodTexture)
     topBar.moodSprite.anchor.set(0, 0.5)
     topBar.moodSprite.position.set(5, height / 2)
     topBar.moodSprite.scale.set(2, 2)
+
+    topBar.timeSprite = new PIXI.Sprite(timeIconTexture)
+    topBar.timeSprite.anchor.set(1, 0.5)
+    topBar.timeSprite.position.set(renderWidth - 5, height / 2)
+    topBar.timeSprite.scale.set(2, 2)
 
     topBar.container.addChild(topBar.bar)
     topBar.container.addChild(topBar.moodText)
     topBar.container.addChild(topBar.moodSprite)
     topBar.container.addChild(topBar.timerText)
     topBar.container.addChild(topBar.nameText)
+    topBar.container.addChild(topBar.timeSprite)
 
-    topBar.update = function updateTopBar (currentMood, timer, name) {
+    topBar.update = function updateTopBar (currentMood, moodMax, timer, name) {
       topBar.moodText.text = '' + currentMood
-      topBar.moodSprite.texture = getMoodTexture(currentMood)
+      topBar.moodSprite.texture = getMoodTexture(currentMood, moodMax)
       topBar.nameText.text = name
-
-      if (timer >= 0) {
-        var minutes = Math.floor(timer / 60)
-        var seconds = timer % 60
-
-        topBar.timerText.text = minutes + ':' + (seconds > 9 ? seconds : '0' + seconds)
-      } else {
-        topBar.timerText.text = ''
-      }
+      topBar.timerText.text = formatTime(timer)
+      topBar.timeSprite.visible = timer >= 0
     }
 
     return topBar
+  }
+
+  function formatTime (time) {
+    if (time >= 0) {
+      var minutes = Math.floor(time / 60)
+      var seconds = time % 60
+
+      return minutes + ':' + (seconds > 9 ? seconds : '0' + seconds)
+    }
+
+    return ''
   }
 
   function generateRandomPerson (house) {
@@ -940,10 +1075,11 @@
     return createPerson(house, x, y, target)
   }
 
-  function randomLevelGenerator (w, h, scale, roomCount, numPersons, semiRandom, timeLeft) {
+  function randomLevelGenerator (w, h, scale, roomCount, numPersons, mood, semiRandom, timeLeft) {
     if (!timeLeft) timeLeft = -1
     return function generator (level) {
       level.timeLeft = timeLeft
+      level.moodMax = mood || numPersons * 30
 
       level.house = buildHouse(w, h, scale)
       fillRandomHouse(level.house, roomCount, 0.3)
@@ -1074,16 +1210,26 @@
     level.grid = createGrid(level.house.width, level.house.height, level.house.effectiveTileSize, gridColor)
     level.grid.alpha = gridAlpha
 
-    level.mood = initialMood
+    if (!level.moodMax) level.moodMax = 100
+    level.mood = level.moodMax
+    level.happyPersons = 0
 
     level.updateMood = function updateMood () {
       for (var i = 0; i < level.persons.length; i++) {
-        level.mood -= level.persons[i].mood > 0 ? 0 : level.persons[i].mood < 0 ? 3 : 1
+        level.mood -= level.persons[i].mood > 1 ? 0 : level.persons[i].mood < 1 ? 3 : 1
+      }
+
+      if (level.mood <= 0) {
+        level.end(false)
       }
     }
 
     level.updateTimer = function updateMood () {
       level.timeLeft -= 1
+
+      if (level.timeLeft === 0) {
+        level.end(false)
+      }
     }
 
     level.update = function update () {
@@ -1103,6 +1249,16 @@
     level.start = function startLevel () {
       level.moodTimer = window.setInterval(level.updateMood, 5000)
       level.timeTimer = window.setInterval(level.updateTimer, 1000)
+    }
+
+    level.end = function endLevel (success) {
+      level.end = function () {}
+
+      window.clearInterval(level.moodTimer)
+      window.clearInterval(level.timeTimer)
+
+      Game.endScreen.update(level.mood, level.moodMax, level.timeLeft, !success)
+      window.setTimeout(Game.endScreen.show, 1000)
     }
 
     level.container.addChild(floorSprite)
@@ -1136,7 +1292,7 @@
   }
 
   function changeLevel (index) {
-    fadeIn(Game.blackBox).call(function () {
+    function swapLevel () {
       Game.currentLevel = index
       Game.levelContainer.removeChildren()
       Game.level = generateLevel(levels[index].generator)
@@ -1148,7 +1304,10 @@
 
       Game.level.arrows.refresh()
       updateTopBar()
-    })
+    }
+
+    if (Game.endScreen.shown) fadeOut(Game.endScreen.container).call(swapLevel)
+    else fadeIn(Game.blackBox).call(swapLevel)
   }
 
   function onAssetsLoaded () {
@@ -1160,14 +1319,18 @@
     stage.addChild(Game.levelContainer)
     Game.levelContainer.addChild(Game.level.container)
 
+    Game.topBar = createTopBar(topBarColor, topBarBackground, topBarHeight)
+    stage.addChild(Game.topBar.container)
+
     Game.blackBox = new PIXI.Graphics()
     Game.blackBox.beginFill(0x000000)
     Game.blackBox.drawRect(0, 0, renderWidth, renderHeight)
     stage.addChild(Game.blackBox)
     fadeOut(Game.blackBox).call(Game.level.start)
 
-    Game.topBar = createTopBar(topBarColor, topBarBackground, topBarHeight)
-    stage.addChild(Game.topBar.container)
+    Game.endScreen = createLevelEndScreen()
+    Game.endScreen.container.alpha = 0
+    stage.addChild(Game.endScreen.container)
 
     Game.level.arrows.refresh()
 
@@ -1177,14 +1340,16 @@
   }
 
   function updateTopBar () {
-    Game.topBar.update(Game.level.mood, Game.level.timeLeft, Game.level.name)
+    Game.topBar.update(Game.level.mood, Game.level.moodMax, Game.level.timeLeft, Game.level.name)
   }
 
   function main (level) {
     window.requestAnimationFrame(main)
 
-    Game.level.update()
-    updateTopBar()
+    if (Game.level) {
+      Game.level.update()
+      updateTopBar()
+    }
 
     renderer.render(stage)
   }
