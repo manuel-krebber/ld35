@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script src="bower_components/PreloadJS/lib/preloadjs-0.6.2.combined.js"></script>
+    <script src="bower_components/jquery/dist/jquery.js"></script>
+    <script src="bower_components/howler.js/howler.js"></script>
+    <script src="bower_components/pixi.js/bin/pixi.js"></script>
+    <script src="bower_components/TweenJS/lib/tweenjs-0.6.2.min.js"></script>
+    <style>
+      html, body { height: 100%; margin: 0; }
+      html, body {
+          height: 100%;
+      }
+
+      html {
+          display: table;
+          margin: auto;
+          background: #000000;
+          color: #FFFFFF
+      }
+
+      body {
+          display: table-cell;
+          vertical-align: middle;
+      }
+      
+      canvas {
+        border: 3px solid #333;
+      }
+      
+      #levelSelect {
+        text-align: center;
+        width: 100%;
+     }
+    </style>
+  </head>
+  <body>
+    <div id="gameView"></div>
+    <div id="levelSelect">
+      Change level:
+    </div>
+    <script src="main.js"></script>
+  </body>
+</html>

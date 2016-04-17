@@ -1,11 +1,6 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <script src="bower_components/PreloadJS/lib/preloadjs-0.6.2.combined.js"></script>
-    <script src="bower_components/jquery/dist/jquery.js"></script>
-    <script src="bower_components/howler.js/howler.js"></script>
-    <script src="bower_components/pixi.js/bin/pixi.js"></script>
-    <script src="bower_components/TweenJS/lib/tweenjs-0.6.2.min.js"></script>
     <style>
       html, body { height: 100%; margin: 0; }
       html, body {
@@ -15,28 +10,40 @@
       html {
           display: table;
           margin: auto;
+          background: #000000;
+          color: #FFFFFF
       }
 
       body {
           display: table-cell;
           vertical-align: middle;
+          font-size: 150%;
+          text-align: center;
       }
       
-      canvas {
+      p {
+        text-align: justify;
+      }
+      
+      img {
+        margin: 0 auto;
         border: 1px solid black;
+        height: 50%;
       }
       
-      #levelSelect {
-        text-align: center;
-        width: 100%;
-     }
+      a {
+        float: right;
+        text-decoration: none;
+        font-weight: bold;
+        color: #CC0000 !important;
+      }
     </style>
   </head>
   <body>
-    <div id="gameView"></div>
-    <div id="levelSelect">
-      Change level:
-    </div>
-    <script src="main.js"></script>
+    <img src="images/house.png" />
+    <p>You are a house - a magic house in the middle of a modern metropolis.</p>
+    <p>And you are about to be demolished to make room for more sky scrapers.</p>
+    <p>You must use you magic shape-shifting abilities to keep the occupants happy, or else...</p>
+    <a href="game.html">Continue...</>
   </body>
 </html>
