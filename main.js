@@ -27,53 +27,151 @@
 
   var levels = [
     {
-      name: 'Tutorial #1',
+      name: 'Autopilot',
       generator: staticLevelGenerator(-1, 3, 10, [
-        'XX5XXXXXX',
-        'XP.....5X',
-        'XXXXXXXXX'
-      ]),
-      nextLevel: 1
+        'XX5 XXX XXX',
+        'XP. ... .5X',
+        'XXX XXX XXX'
+      ])
     },
     {
-      name: 'Tutorial #2',
+      name: 'Too easy',
       generator: staticLevelGenerator(20, 3, 10, [
-        'XXXXXXXXXXXXXXXXXXXXX',
-        'XXXXXX...XXXXXXXXXXXX',
-        'XXXXXXXXXXXXXXXXXXXXX',
-        'XX5XXXXXXXXXXXXXXXXXX',
-        'XP....XXX..........5X',
-        'XXXXXXXXXXXXXXXXXXXXX'
-      ]),
-      nextLevel: 2
+        'XXX XXX XXX XXX XXX XXX XXX',
+        'XXX XXX ... XXX XXX XXX XXX',
+        'XXX XXX XXX XXX XXX XXX XXX',
+
+        'XX5 XXX XXX XXX XXX XXX XXX',
+        'XP. ... XXX ... ... ... .5X',
+        'XXX XXX XXX XXX XXX XXX XXX'
+      ])
     },
     {
-      name: 'Tutorial #3',
+      name: 'More tutorial?',
       generator: staticLevelGenerator(30, 3, 10, [
-        'XX1XXXXXXXXXXXXXXXXXX',
-        'XPXXXX...XXXXXX....1X',
-        'X.XXXXXXXXXXXXXXXXXXX',
-        'X.XXXXXXXXXXXXXXXXXXX',
-        'X.....XXX......XXXXXX',
-        'XXXXXXXXXXXXXXXXXXXXX'
-      ]),
-      nextLevel: 3
+        'XX1 XXX XXX XXX XXX XXX XXX',
+        'XPX XXX ... XXX XXX ... .1X',
+        'X.X XXX XXX XXX XXX XXX XXX',
+
+        'X.X XXX XXX XXX XXX XXX XXX',
+        'X.. ... XXX ... ... XXX XXX',
+        'XXX XXX XXX XXX XXX XXX XXX'
+      ])
     },
     {
-      name: 'Tutorial #4',
+      name: 'Tutorial No. 4',
       generator: staticLevelGenerator(60, 3, 10, [
-        'XX2XXXXXXXXXXXXXXXXXX',
-        'XPXXXX...XXXXXX....1X',
-        'X.XXXXXXXXXXXXXXXXXXX',
-        'X.XXXXXXXXXXXXXXXXXXX',
-        'X.....XXXX.XX.XXXXXXX',
-        'X.XXXXXXXXXXXXXXXXXXX',
-        'X.XXXXX.XXXXXXXXXXXXX',
-        'X.XXXX...XXXXXX.2.XXX',
-        'X.XXXXXXXXXXXXXXXXXXX',
-        'X.XXXXXXXXX1XXXXXXXXX',
-        'X.....XXX.P....XXXXXX',
-        'XXXXXXXXXXXXXXXXXXXXX'
+        'XX2 XXX XXX XXX XXX XXX XXX',
+        'XPX XXX ... XXX XXX ... .1X',
+        'X.X XXX XXX XXX XXX XXX XXX',
+
+        'X.X XXX XXX XXX XXX XXX XXX',
+        'X.. ... XXX X.X X.X XXX XXX',
+        'X.X XXX XXX XXX XXX XXX XXX',
+
+        'XXX X.X X.X XXX XXX XXX XXX',
+        'X.X X.X ... XXX XXX .2. XXX',
+        'X.X X.X XXX XXX XXX XXX XXX',
+
+        'X.X XXX XXX XX1 XXX XXX XXX',
+        'X.. ... XXX .P. ... XXX XXX',
+        'XXX XXX XXX XXX XXX XXX XXX'
+      ])
+    },
+    {
+      name: 'Easier than it looks',
+      generator: staticLevelGenerator(20, 3, 25, [
+        'XX2 X.X XXX X.X X.X',
+        'XP. X.X ... X.X ..X',
+        'XXX X.X XXX X.X XXX',
+
+        'XXX XXX XXX XXX XXX',
+        'XXX XXX XXX XXX ...',
+        'XXX XXX XXX XXX XXX',
+
+        'XXX XXX XXX XXX X.X',
+        'XXX XXX XXX XXX X.X',
+        'XXX XXX XXX XXX X.X',
+
+        'XXX XXX XXX XXX XXX',
+        'XXX XXX XXX XXX ...',
+        'XXX XXX XXX XXX XXX',
+
+        'XXX X.X XXX X.X XXX',
+        'X2. X.X ... X.X ..X',
+        'XXX X.X XXX X.X X.X'
+      ])
+    },
+    {
+      name: 'Making a bridge',
+      generator: staticLevelGenerator(60, 3, 35, [
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX',
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX',
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX',
+
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XX3',
+        'X3. ... XXX XXX XXX XXX XXX XXX XXX ... .PX',
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX',
+
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX',
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX',
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX'
+      ])
+    },
+    {
+      name: 'More bridges',
+      generator: staticLevelGenerator(140, 3, 40, [
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX',
+        'X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X',
+        'X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X',
+
+        'XXX X.X XXX XXX XXX XXX XXX XXX XXX X.X XX3',
+        'X3. ... XXX XXX XXX XXX XXX XXX XXX ... .PX',
+        'XXX X.X XXX XXX XXX XXX XXX XXX XXX X.X XXX',
+
+        'X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X',
+        'X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X',
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX'
+      ])
+    },
+    {
+      name: 'God, I hate this guy',
+      generator: staticLevelGenerator(160, 3, 50, [
+        'X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X',
+        'X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X',
+        'X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X',
+
+        'XXX X.X X.X X.X X.X X.X X.X X.X X.X X.X XX3',
+        'X3. ... X.X X.X X.X X.X X.X X.X X.X ... .PX',
+        'XXX X.X X.X X.X X.X X.X X.X X.X X.X X.X XXX',
+
+        'X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X',
+        'X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X',
+        'X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X X.X'
+      ])
+    },
+    {
+      name: 'Crossed Concerns',
+      generator: staticLevelGenerator(300, 3, 80, [
+        'XXX XX4 XXX XXX XXX XXX XXX XXX XXX XXX XXX',
+        'X0. .P. XXX XXX XXX XXX XXX ... XXX XXX XXX',
+        'X.X XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX',
+
+        'X.4 XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX',
+        'XPX X.. XXX XXX XXX XXX ... XXX XXX XXX XXX',
+        'X.X X.X XXX XXX XXX XXX XXX XXX XXX XXX XXX',
+
+        'XXX XXX XXX X.X XXX XXX XXX X.X XXX XXX XXX',
+        'XXX XXX XXX X.X XXX ... XXX X.X XXX XXX XXX',
+        'XXX XXX XXX X.X XXX XXX XXX X.X XXX XXX XXX',
+
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX X.X X.0',
+        'XXX XXX XXX XXX ... XXX XXX XXX XXX ..X XPX',
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX X.X',
+
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XX0 X.X',
+        'XXX XXX XXX ... XXX XXX XXX XXX XXX .P. .4X',
+        'XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX XXX'
       ])
     },
     {
@@ -422,6 +520,13 @@
     if (!house.canMove(person.x, person.y, person.dx, person.dy)) {
       if (person.container.position.x !== house.getLocationX(person.x) ||
           person.container.position.y !== house.getLocationY(person.y)) {
+        var diffPrev = Math.abs(person.container.position.x - house.getLocationX(person.x)) +
+          Math.abs(person.container.position.y - house.getLocationX(person.y))
+        var diffNext = Math.abs(person.container.position.x - house.getLocationX(person.x + person.dx)) +
+          Math.abs(person.container.position.y - house.getLocationX(person.y + person.dy))
+          
+        if (diffNext < diffPrev) return
+
         person.x += person.dx
         person.dx = -person.dx
         person.y += person.dy
@@ -545,7 +650,7 @@
         title.style.fill = '#00AA00'
       }
 
-      if (levels[Game.currentLevel].nextLevel === undefined) {
+      if (Game.currentLevel + 1 >= levels.length) {
         nextButton.visible = false
         restartButton.anchor.x = 0.5
       }
@@ -573,7 +678,7 @@
     })
 
     nextButton.on('click', function () {
-      changeLevel(levels[Game.currentLevel].nextLevel)
+      changeLevel(Game.currentLevel + 1)
     })
 
     return endScreen
@@ -941,8 +1046,8 @@
     var infos = []
 
     if (lines.length % 3 !== 0) throw new SyntaxError('Unexpected number of lines')
-    if (lines[0].length % 3 !== 0) throw new SyntaxError('Unexpected length of first line')
-    var width = lines[0].length / 3
+    if ((lines[0].length + 1) % 4 !== 0) throw new SyntaxError('Unexpected length of first line')
+    var width = (lines[0].length + 1) / 4
     var height = lines.length / 3
     for (var i = 0; i < lines.length; i++) {
       if (lines[i].length !== lines[0].length) throw new SyntaxError('Unexpected length of line #' + i)
@@ -951,18 +1056,18 @@
       infos[x] = []
       for (var y = 0; y < height; y++) {
         infos[x][y] = {
-          top: lines[3 * y][3 * x + 1] === '.',
-          left: lines[3 * y + 1][3 * x] === '.',
-          right: lines[3 * y + 1][3 * x + 2] === '.',
-          bottom: lines[3 * y + 2][3 * x + 1] === '.'
+          top: lines[3 * y][4 * x + 1] === '.',
+          left: lines[3 * y + 1][4 * x] === '.',
+          right: lines[3 * y + 1][4 * x + 2] === '.',
+          bottom: lines[3 * y + 2][4 * x + 1] === '.'
         }
 
-        var center = lines[3 * y + 1][3 * x + 1]
+        var center = lines[3 * y + 1][4 * x + 1]
         var target = parseInt(center, 10)
         if (!isNaN(target)) {
           infos[x][y].target = targets[target]
         } else if (center === 'P') {
-          var person = parseInt(lines[3 * y][3 * x + 2], 10)
+          var person = parseInt(lines[3 * y][4 * x + 2], 10)
 
           if (isNaN(person)) {
             throw new SyntaxError('Missing number for person')
@@ -1324,6 +1429,10 @@
 
   function changeLevel (index) {
     function swapLevel () {
+      if (Game.level) {
+        if (Game.level.timeTimer) window.clearInterval(Game.level.timeTimer)
+        if (Game.level.moodTimer) window.clearInterval(Game.level.moodTimer)
+      }
       Game.currentLevel = index
       Game.levelContainer.removeChildren()
       Game.level = generateLevel(levels[index].generator)
