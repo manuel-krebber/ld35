@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      html, body { height: 100%; margin: 0; }
+      html, body {
+          height: 100%;
+      }
+
+      html {
+          display: table;
+          margin: auto;
+          background: #000000;
+          color: #FFFFFF
+      }
+
+      body {
+          display: table-cell;
+          vertical-align: middle;
+          font-size: 150%;
+          text-align: center;
+      }
+      
+      img {
+        margin-right: 10px;
+        image-rendering: pixelated;
+      }
+      
+      table {        
+        border-spacing: 10px;
+        border-collapse: separate;
+        background: #222;
+        padding: 20px;
+      }
+      
+      td {
+        text-align: justify;
+        min-height: 64px;
+        vertical-align: middle; 
+        line-height: 200%; 
+      }
+      
+      td:first-child {
+        text-align: center;
+      }
+      
+      a {
+        float: right;
+        text-decoration: none;
+        font-weight: bold;
+        color: #CC0000 !important;
+      }
+    </style>
+  </head>
+  <body>
+    <table>
+      <tr>
+        <td>
+          <img src="images/manual-bubble.png" /> 
+          <img src="images/manual-room.png" /> 
+        </td>
+        <td>
+          Your tenants all have a location they want to reach. It is indicated by a thought bubble over their head.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <img src="images/arrow.png" style="height: 54px" /> 
+        </td>
+        <td>
+          You can change the layout of your rooms and corridors using the arrows on the side.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <img src="images/mood-good.png" style="height: 64px" />    
+          <img src="images/mood-neutral.png" style="height: 64px" />
+        </td>
+        <td>
+          They are happy, when they can find a way to get to that location and will move there on their own.<br />
+          Otherwise, they will become unhappy and the overall mood (upper left corner) goes down.<br />
+          If they cannot get to their goal, they will stroll around.
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <img src="images/mood-bad.png" style="height: 64px" /> 
+        </td>
+        <td>
+          If the overall mood gets to zero, you will be demolished!
+        </td>
+      </tr>
+      <tr>
+        <td>
+          <img src="images/icon-time.png" style="height: 64px" /> 
+        </td>
+        <td>
+          Sometimes your tenants are especially impatient, watch out for the timer on the top right.<br/>
+          If the time runs out before they reach their destination, again, demolished!
+        </td>
+      </tr>
+      <tr>
+        <td>
+        </td>
+        <td>
+        <a href="game.html">Get started!</>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

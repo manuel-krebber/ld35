@@ -28,7 +28,6 @@
       img {
         margin: 0 auto;
         border: 1px solid black;
-        height: 50%;
       }
       
       a {
@@ -37,13 +36,43 @@
         font-weight: bold;
         color: #CC0000 !important;
       }
+      
+      table {        
+        border-spacing: 10px;
+        border-collapse: separate;
+        background: #222;
+        padding: 20px;
+      }
+      
+      td {
+        text-align: justify;
+        min-height: 64px;
+        vertical-align: middle; 
+        line-height: 200%; 
+      }
     </style>
   </head>
   <body>
-    <img src="images/house.png" />
-    <p>You are a house - a magic house in the middle of a modern metropolis.</p>
-    <p>And you are about to be demolished to make room for more sky scrapers.</p>
-    <p>You must use you magic shape-shifting abilities to keep the occupants happy, or else...</p>
-    <a href="game.html">Continue...</>
+    <table>
+      <tr>
+        <td style="text-align: center">
+        <img src="images/house.png" />
+        </td>
+      </tr>
+      <tr>
+        <td>
+        <p>You are a house - a magic house in the middle of a modern metropolis.</p>
+        <p>And you are about to be demolished to make room for more sky scrapers.</p>
+        <p>You must use you magic shape-shifting abilities to keep the occupants happy, or else...</p>
+        </td>
+      </tr>
+      <tr>
+        <td>
+        </td>
+        <td>
+        <a href="manual.html">Continue...</a>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>

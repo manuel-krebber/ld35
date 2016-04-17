@@ -37,12 +37,42 @@
     },
     {
       name: 'Tutorial #2',
-      generator: staticLevelGenerator(-1, 3, 10, [
+      generator: staticLevelGenerator(20, 3, 10, [
         'XXXXXXXXXXXXXXXXXXXXX',
         'XXXXXX...XXXXXXXXXXXX',
         'XXXXXXXXXXXXXXXXXXXXX',
         'XX5XXXXXXXXXXXXXXXXXX',
         'XP....XXX..........5X',
+        'XXXXXXXXXXXXXXXXXXXXX'
+      ]),
+      nextLevel: 2
+    },
+    {
+      name: 'Tutorial #3',
+      generator: staticLevelGenerator(30, 3, 10, [
+        'XX1XXXXXXXXXXXXXXXXXX',
+        'XPXXXX...XXXXXX....1X',
+        'X.XXXXXXXXXXXXXXXXXXX',
+        'X.XXXXXXXXXXXXXXXXXXX',
+        'X.....XXX......XXXXXX',
+        'XXXXXXXXXXXXXXXXXXXXX'
+      ]),
+      nextLevel: 3
+    },
+    {
+      name: 'Tutorial #4',
+      generator: staticLevelGenerator(60, 3, 10, [
+        'XX2XXXXXXXXXXXXXXXXXX',
+        'XPXXXX...XXXXXX....1X',
+        'X.XXXXXXXXXXXXXXXXXXX',
+        'X.XXXXXXXXXXXXXXXXXXX',
+        'X.....XXXX.XX.XXXXXXX',
+        'X.XXXXXXXXXXXXXXXXXXX',
+        'X.XXXXX.XXXXXXXXXXXXX',
+        'X.XXXX...XXXXXX.2.XXX',
+        'X.XXXXXXXXXXXXXXXXXXX',
+        'X.XXXXXXXXX1XXXXXXXXX',
+        'X.....XXX.P....XXXXXX',
         'XXXXXXXXXXXXXXXXXXXXX'
       ])
     },
@@ -438,6 +468,7 @@
   function createLevelEndScreen () {
     var endScreen = { shown: false }
     var container = endScreen.container = new PIXI.Container()
+    container.visible = false
 
     var title = endScreen.title = new PIXI.Text('Title', {
       font: 'bold 100px monospace',
