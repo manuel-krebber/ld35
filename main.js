@@ -1,10 +1,10 @@
 (function () {
-  var globalScale = 3
   var tileSize = 32
+  var personRadius = 12 / 2
+
   var topBarHeight = 50
   var topBarBackground = 0x666666
   var topBarColor = 0xFFFFFF
-  var personRadius = 12 / 2
   var iconFadeTime = 1500
   var idleTime = 2000
   var initialMood = 100
@@ -29,7 +29,7 @@
   var levels = [
     {
       name: 'Tutorial #1',
-      generator: staticLevelGenerator(-1, [
+      generator: staticLevelGenerator(-1, 3, [
         'XX5XXXXXXXXXXXXXXXXXX',
         'XP.................5X',
         'XXXXXXXXXXXXXXXXXXXXX'
@@ -37,7 +37,7 @@
     },
     {
       name: 'Tutorial #2',
-      generator: staticLevelGenerator(-1, [
+      generator: staticLevelGenerator(-1, 3, [
         'XXXXXXXXXXXXXXXXXXXXX',
         'XXXXXX...XXXXXXXXXXXX',
         'XXXXXXXXXXXXXXXXXXXXX',
@@ -45,6 +45,18 @@
         'XP....XXX..........5X',
         'XXXXXXXXXXXXXXXXXXXXX'
       ])
+    },
+    {
+      name: 'Small Random',
+      generator: randomLevelGenerator(6, 4, 3, 2, 1, true, 60)
+    },
+    {
+      name: 'Medium Random',
+      generator: randomLevelGenerator(10, 6, 3, 4, 3, true, 160)
+    },
+    {
+      name: 'Big Random',
+      generator: randomLevelGenerator(18, 10, 2, 6, 6, true, 300)
     }
   ]
 
@@ -92,9 +104,6 @@
   var desaturateFilter = new PIXI.filters.ColorMatrixFilter()
   desaturateFilter.desaturate()
 
-  var effectivePersonRadius = personRadius * globalScale
-  var effectiveTileSize = tileSize * globalScale
-
   var renderer = PIXI.autoDetectRenderer(renderWidth, renderHeight,
     {
       backgroundColor: 0x000000
@@ -128,7 +137,7 @@
     return grid
   }
 
-  function locationImage (top, left, right, bottom, room) {
+  function locationImage (scale, top, left, right, bottom, room) {
     var texture
     var rotation = 0
 
@@ -195,8 +204,7 @@
       sprite = container
     }
 
-    sprite.scale.x = globalScale
-    sprite.scale.y = globalScale
+    sprite.scale.set(scale, scale)
 
     return sprite
   }
@@ -229,7 +237,7 @@
   function createPerson (house, x, y, target) {
     var personAnim = new PIXI.extras.MovieClip(personTextures)
 
-    personAnim.scale.set(globalScale, globalScale)
+    personAnim.scale.set(house.scale, house.scale)
     personAnim.animationSpeed = 0.06
     personAnim.anchor.set(0.5, 0.5)
     personAnim.interactive = true
@@ -238,11 +246,11 @@
 
     var bubble = new PIXI.Sprite(bubbleTexture)
     bubble.anchor.set(0, 1.1)
-    bubble.scale.set(globalScale, globalScale)
+    bubble.scale.set(house.scale, house.scale)
 
     var targetIcon = new PIXI.Sprite(iconTextures[target])
     targetIcon.anchor.set(-0.3, 1.6)
-    targetIcon.scale.set(globalScale, globalScale)
+    targetIcon.scale.set(house.scale, house.scale)
 
     var moodIcon = new PIXI.Sprite(getMoodTexture(100))
     moodIcon.anchor.set(1, 1.6)
@@ -464,12 +472,12 @@
       } else {
         person.container.x += sdx
         person.animation.play()
-        var progress = person.container.x - house.getLocationX(person.x) - sdx * effectiveTileSize / 2
+        var progress = person.container.x - house.getLocationX(person.x) - sdx * house.effectiveTileSize / 2
 
-        if (progress + sdx * effectivePersonRadius === 0) {
+        if (progress + sdx * house.effectivePersonRadius === 0) {
           house.colBlocked[person.x + sdx]++
         }
-        if (progress - sdx * effectivePersonRadius === 0) {
+        if (progress - sdx * house.effectivePersonRadius === 0) {
           house.colBlocked[person.x]--
         }
         if (progress === 0) {
@@ -478,7 +486,7 @@
           person.location = house.locations[person.x + sdx][person.y]
         }
 
-        if (Math.abs(person.container.x - house.getLocationX(person.x)) === effectiveTileSize) {
+        if (Math.abs(person.container.x - house.getLocationX(person.x)) === house.effectiveTileSize) {
           person.dx += -sdx
           person.x += sdx
         }
@@ -492,12 +500,12 @@
       } else {
         person.container.y += sdy
         person.animation.play()
-        progress = person.container.y - house.getLocationY(person.y) - sdy * effectiveTileSize / 2
+        progress = person.container.y - house.getLocationY(person.y) - sdy * house.effectiveTileSize / 2
 
-        if (progress + sdy * effectivePersonRadius === 0) {
+        if (progress + sdy * house.effectivePersonRadius === 0) {
           house.rowBlocked[person.y + sdy]++
         }
-        if (progress - sdy * effectivePersonRadius === 0) {
+        if (progress - sdy * house.effectivePersonRadius === 0) {
           house.rowBlocked[person.y]--
         }
         if (progress === 0) {
@@ -506,7 +514,7 @@
           person.location = house.locations[person.x][person.y + sdy]
         }
 
-        if (Math.abs(person.container.y - house.getLocationY(person.y)) === effectiveTileSize) {
+        if (Math.abs(person.container.y - house.getLocationY(person.y)) === house.effectiveTileSize) {
           person.dy += -sdy
           person.y += sdy
         }
@@ -607,7 +615,6 @@
 
   function fillRandomHouse (house, roomCount, fillFactor) {
     for (var x = 0; x < house.width; x++) {
-      house.locations[x] = []
       for (var y = 0; y < house.height; y++) {
         var info = {
           top: y > 0 ? house.locations[x][y - 1].info.bottom : false,
@@ -615,7 +622,7 @@
           right: x < house.width - 1 ? Math.random() < fillFactor : false,
           bottom: y < house.height - 1 ? Math.random() < fillFactor : false
         }
-        var sprite = locationImage(info.top, info.left, info.right, info.bottom)
+        var sprite = locationImage(house.scale, info.top, info.left, info.right, info.bottom)
 
         sprite.position.x = house.getLocationX(x)
         sprite.position.y = house.getLocationY(y)
@@ -633,7 +640,7 @@
   function generateArrows (house) {
     var leftArrows = new PIXI.Container()
     var rightArrows = new PIXI.Container()
-    rightArrows.position.x = house.width * effectiveTileSize
+    rightArrows.position.x = house.width * house.effectiveTileSize
     var rowArrows = []
     var colArrows = []
 
@@ -645,12 +652,12 @@
     }
 
     for (var y = 0; y < house.height; y++) {
-      var leftArrow = createArrowSprite(y, -1, -1)
+      var leftArrow = createArrowSprite(house, y, -1, -1)
       wrapClickHandler(leftArrow, house.shiftLeft, y)
       leftArrows.addChild(leftArrow)
       rowArrows.push(leftArrow)
 
-      var rightArrow = createArrowSprite(y, -1, 1)
+      var rightArrow = createArrowSprite(house, y, -1, 1)
       wrapClickHandler(rightArrow, house.shiftRight, y)
       rightArrows.addChild(rightArrow)
       rowArrows.push(rightArrow)
@@ -658,14 +665,14 @@
 
     var topArrows = new PIXI.Container()
     var bottomArrows = new PIXI.Container()
-    bottomArrows.position.y = house.height * effectiveTileSize
+    bottomArrows.position.y = house.height * house.effectiveTileSize
     for (var x = 0; x < house.width; x++) {
-      var topArrow = createArrowSprite(-1, x, -1)
+      var topArrow = createArrowSprite(house, -1, x, -1)
       topArrows.addChild(topArrow)
       wrapClickHandler(topArrow, house.shiftUp, x)
       colArrows.push(topArrow)
 
-      var bottomArrow = createArrowSprite(-1, x, 1)
+      var bottomArrow = createArrowSprite(house, -1, x, 1)
       bottomArrows.addChild(bottomArrow)
       wrapClickHandler(bottomArrow, house.shiftDown, x)
       colArrows.push(bottomArrow)
@@ -704,7 +711,7 @@
     }
   }
 
-  function createArrowSprite (row, column, dir) {
+  function createArrowSprite (house, row, column, dir) {
     var sprite = new PIXI.Sprite(arrowTexture)
 
     sprite.anchor.x = 0
@@ -718,7 +725,7 @@
         sprite.position.x = 2
       }
 
-      sprite.position.y = row * effectiveTileSize + effectiveTileSize / 2
+      sprite.position.y = row * house.effectiveTileSize + house.effectiveTileSize / 2
     } else {
       if (dir < 0) {
         sprite.position.y = -2
@@ -728,31 +735,40 @@
         sprite.rotation = deg45
       }
 
-      sprite.position.x = column * effectiveTileSize + effectiveTileSize / 2
+      sprite.position.x = column * house.effectiveTileSize + house.effectiveTileSize / 2
     }
 
-    sprite.scale.x = globalScale
-    sprite.scale.y = globalScale
+    sprite.scale.x = house.scale
+    sprite.scale.y = house.scale
 
     sprite.interactive = true
 
     return sprite
   }
 
-  function generateRooms (house, numRooms) {
+  function generateRooms (house, numRooms, semiRandom) {
+    var thisTargets = targets.slice(0)
     var rooms = []
     for (var i = 0; i < numRooms; i++) {
-      var target = targets.splice(Math.floor(Math.random() * targets.length), 1)[0]
+      var target = thisTargets[Math.floor(Math.random() * thisTargets.length)]
+      if (semiRandom) {
+        if (thisTargets.length > 1) {
+          thisTargets.splice(thisTargets.indexOf(target), 1)
+        } else {
+          thisTargets = targets.slice(0)
+        }
+      }
+      
       while (true) {
         var x = Math.floor(Math.random() * house.width)
         var y = Math.floor(Math.random() * house.height)
 
         var location = house.locations[x][y]
-        if (isLocationFree(location)) {
+        if (isLocationFree(location) && !location.target) {
           location.info.target = target
           var container = location.sprite.parent
           container.removeChild(location.sprite)
-          location.sprite = locationImage(location.info.top, location.info.left, location.info.right, location.info.bottom, target)
+          location.sprite = locationImage(house.scale, location.info.top, location.info.left, location.info.right, location.info.bottom, target)
           location.sprite.position.x = house.getLocationX(x)
           location.sprite.position.y = house.getLocationY(y)
           container.addChild(location.sprite)
@@ -765,7 +781,7 @@
     return rooms
   }
 
-  function staticLevelGenerator(timeLeft, lines) {
+  function staticLevelGenerator (timeLeft, scale, lines) {
     var infos = []
 
     if (lines.length % 3 !== 0) throw new SyntaxError('Unexpected number of lines')
@@ -804,14 +820,14 @@
     return function generator (level) {
       level.timeLeft = timeLeft
 
-      level.house = buildHouse(width, height)
+      level.house = buildHouse(width, height, scale)
       level.persons = []
       level.house.rooms = []
 
       for (var x = 0; x < width; x++) {
         for (var y = 0; y < height; y++) {
           var info = $.extend({}, infos[x][y])
-          var sprite = locationImage(info.top, info.left, info.right, info.bottom, info.target)
+          var sprite = locationImage(scale, info.top, info.left, info.right, info.bottom, info.target)
 
           sprite.position.x = level.house.getLocationX(x)
           sprite.position.y = level.house.getLocationY(y)
@@ -908,10 +924,10 @@
   }
 
   function generateRandomPerson (house) {
-    var target = house.rooms[Math.floor(Math.random() * house.rooms.length)].info.target
+    var idx = Math.floor(Math.random() * house.rooms.length)
+    var target = house.rooms[idx].info.target
 
     var x, y
-
     while (true) {
       x = Math.floor(Math.random() * house.width)
       y = Math.floor(Math.random() * house.height)
@@ -924,15 +940,15 @@
     return createPerson(house, x, y, target)
   }
 
-  function randomLevelGenerator (w, h, roomCount, numPersons, timeLeft) {
+  function randomLevelGenerator (w, h, scale, roomCount, numPersons, semiRandom, timeLeft) {
     if (!timeLeft) timeLeft = -1
     return function generator (level) {
       level.timeLeft = timeLeft
 
-      level.house = buildHouse(w, h)
+      level.house = buildHouse(w, h, scale)
       fillRandomHouse(level.house, roomCount, 0.3)
 
-      level.house.rooms = generateRooms(level.house, roomCount)
+      level.house.rooms = generateRooms(level.house, roomCount, semiRandom)
 
       level.persons = []
       for (var i = 0; i < numPersons; i++) {
@@ -946,7 +962,8 @@
     }
   }
 
-  function buildHouse (w, h) {
+  function buildHouse (w, h, scale) {
+    if (!scale) scale = 1
     var house = {
       width: w,
       height: h,
@@ -954,6 +971,10 @@
       container: new PIXI.Container(),
       rowBlocked: Array(h).fill(0),
       colBlocked: Array(w).fill(0),
+
+      scale: scale,
+      effectivePersonRadius: personRadius * scale,
+      effectiveTileSize: tileSize * scale,
 
       shiftLeft: function shiftLeft (y) {
         var first = house.locations[0][y]
@@ -1018,11 +1039,11 @@
       },
 
       getLocationX: function getLocationX (col) {
-        return col * effectiveTileSize + effectiveTileSize / 2
+        return col * house.effectiveTileSize + house.effectiveTileSize / 2
       },
 
       getLocationY: function getLocationY (row) {
-        return row * effectiveTileSize + effectiveTileSize / 2
+        return row * house.effectiveTileSize + house.effectiveTileSize / 2
       }
     }
 
@@ -1045,12 +1066,12 @@
     levelGenerator(level)
     level.house.level = level
 
-    var floorSprite = new PIXI.extras.TilingSprite(floorTexture, level.house.width * effectiveTileSize, level.house.height * effectiveTileSize)
-    floorSprite.tileScale.set(globalScale, globalScale)
+    var floorSprite = new PIXI.extras.TilingSprite(floorTexture, level.house.width * level.house.effectiveTileSize, level.house.height * level.house.effectiveTileSize)
+    floorSprite.tileScale.set(level.house.scale, level.house.scale)
 
     level.arrows = generateArrows(level.house)
 
-    level.grid = createGrid(level.house.width, level.house.height, effectiveTileSize, gridColor)
+    level.grid = createGrid(level.house.width, level.house.height, level.house.effectiveTileSize, gridColor)
     level.grid.alpha = gridAlpha
 
     level.mood = initialMood
@@ -1091,7 +1112,7 @@
     level.container.addChild(level.arrows.container)
     level.container.addChild(level.bubbleContainer)
 
-    level.container.pivot.set(level.house.width * effectiveTileSize / 2, level.house.height * effectiveTileSize / 2)
+    level.container.pivot.set(level.house.width * level.house.effectiveTileSize / 2, level.house.height * level.house.effectiveTileSize / 2)
     level.container.position.set(renderWidth / 2, topBarHeight + (renderHeight - topBarHeight) / 2)
 
     return level
